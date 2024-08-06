@@ -2130,7 +2130,11 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "dioxus-logger",
+ "futures-channel",
+ "js-sys",
  "manganis",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

@@ -10,6 +10,10 @@ edition = "2021"
 
 dioxus = { version = "0.5", features = ["web", "router"] }
 manganis = { version = "0.2.2"}
+futures-channel = { version = "0.3.30"}
+js-sys = {version = "0.3.69"}
+wasm-bindgen = {version = "0.2.92"}
+web-sys = {version = "0.3.69"}
 
 # Debug
 dioxus-logger = "0.5.1"
