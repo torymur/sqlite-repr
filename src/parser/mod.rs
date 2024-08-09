@@ -1,3 +1,5 @@
+pub mod header;
 mod reader;
 
-pub use reader::{Parts, Reader};
+pub use header::DBHeader;
+pub use reader::Reader;

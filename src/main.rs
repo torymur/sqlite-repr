@@ -1,15 +1,14 @@
 #![allow(non_snake_case)]
 
+use std::include_bytes;
 use std::{collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
 
-mod parser;
+use sqlite_repr::parser::Reader;
+use sqlite_repr::ui::header::{Field, Parts};
 
-use parser::*;
-
-use std::include_bytes;
 pub const SIMPLE_DB: &'static [u8] = include_bytes!("../examples/simple");
 pub const BIG_PAGE_DB: &'static [u8] = include_bytes!("../examples/big_page");
 
@@ -31,6 +30,14 @@ pub struct AppState {
     pub current_db: Signal<String>,
     pub current_reader: Signal<Reader>,
     pub selected_part: Signal<Rc<dyn Parts>>,
+    pub selected_field: Signal<Option<Field>>,
+    pub format: Signal<Format>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Format {
+    Hybrid,
+    Hex,
 }
 
 impl AppState {
@@ -49,6 +56,8 @@ impl AppState {
             current_db: Signal::new(start_db_name.to_string()),
             current_reader: Signal::new(reader),
             selected_part: Signal::new(first_part),
+            selected_field: Signal::new(None),
+            format: Signal::new(Format::Hybrid),
         }
     }
 }
@@ -72,11 +81,12 @@ pub fn Header() -> Element {
     let db_examples = use_context::<AppState>().db_examples;
     let mut current_db = use_context::<AppState>().current_db;
     let mut current_reader = use_context::<AppState>().current_reader;
-    let mut selected = use_context::<AppState>().selected_part;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut selected_field = use_context::<AppState>().selected_field;
 
     rsx! {
         div {
-            class: "flex items-center bg-primary",
+            class: "h-12 flex items-center bg-primary",
             div {
                 class: "text-xl font-bold tracking-tighter pl-4",
                 "SQLite File Format",
@@ -98,7 +108,8 @@ pub fn Header() -> Element {
                                 let db_bytes = db_examples.get(name).unwrap();
                                 let reader = Reader::new(db_bytes).expect("Reader failed");
                                 let first_part = reader.parts[0].clone();
-                                *selected.write() = first_part;
+                                *selected_part.write() = first_part;
+                                *selected_field.write() = None;
                                 *current_reader.write() = reader;
                             }
                         };
@@ -123,14 +134,14 @@ pub fn Header() -> Element {
 pub fn Body() -> Element {
     rsx! {
         div {
-            class: "flex h-screen w-full",
+            class: "flex w-full",
             div {
                 class: "bg-secondary",
                 SideBar { }
                 div { class: "flex-grow" }
             }
             div {
-                class: "flex flex-col h-screen w-full",
+                class: "flex flex-col w-full",
                 div {
                     Description { }
                 }
@@ -147,10 +158,11 @@ pub fn Body() -> Element {
 pub fn SideBar() -> Element {
     let reader = use_context::<AppState>().current_reader;
     let parts = reader.read().parts.clone();
-    let mut selected = use_context::<AppState>().selected_part;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut selected_field = use_context::<AppState>().selected_field;
     rsx! {
         div {
-            class: "rounded-box p-4 min-h-full w-fit",
+            class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit",
             div {
                 class: "font-bold truncate pb-4",
                 "Structure",
@@ -160,9 +172,10 @@ pub fn SideBar() -> Element {
                     li {
                         button {
                             class: "w-full text-left btn-sm btn-ghost btn-block font-normal truncate",
-                            class: if *selected.read().label() == *part.label() {"btn-active"},
+                            class: if *selected_part.read().label() == *part.label() {"btn-active"},
                             onclick: move |_| {
-                                *selected.write() = part.clone();
+                                *selected_part.write() = part.clone();
+                                *selected_field.write() = None;
                             },
                             "✦ {&part.label()}",
                         }
@@ -175,39 +188,113 @@ pub fn SideBar() -> Element {
 
 pub fn Description() -> Element {
     let selected_part = use_context::<AppState>().selected_part;
-    rsx! {
-        div {
-            class: "p-4 h-64 w-full overflow-auto",
-            "{selected_part().desc()}"
+    let selected_field = use_context::<AppState>().selected_field;
+    match selected_field() {
+        None => {
+            rsx! {
+                div {
+                    class: "p-4 h-64 w-full overflow-auto",
+                    "{selected_part().desc()}"
+                }
+            }
+        }
+        Some(field) => {
+            rsx! {
+                div {
+                    class: "p-4 h-64 w-full",
+                    div {
+                        "{selected_part().desc()}"
+                    }
+                    div {
+                        class: "flex pt-6 text-sm space-x-6",
+                        div {
+                            class: "w-1/2",
+                            "{field.desc}"
+                        }
+                        div {
+                            class: "overflow-auto w-1/2",
+                            table {
+                                class: "table table-sm",
+                                tbody {
+                                    tr {
+                                        td {
+                                            "Offset"
+                                        }
+                                        td {
+                                            "{field.offset}"
+                                        }
+                                    }
+                                    tr {
+                                        td {
+                                            "Size"
+                                        }
+                                        td {
+                                            "{field.size}"
+                                        }
+                                    }
+                                    tr {
+                                        td {
+                                            "Value"
+                                        }
+                                        td {
+                                            "{field.value}"
+                                        }
+                                    }
+                                    tr {
+                                        td {
+                                            "Hex"
+                                        }
+                                        td {
+                                            "{field.to_hex()}"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 pub fn Visual() -> Element {
     let selected_part = use_context::<AppState>().selected_part;
-    let raw_bytes = selected_part().bytes();
-    let vec_bytes = &raw_bytes.to_vec();
-    let text = String::from_utf8_lossy(vec_bytes);
+    let fields = selected_part().fields();
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut formatting = use_context::<AppState>().format;
     rsx! {
         div {
             class: "flex items-center bg-secondary",
             div { class: "flex-grow" }
             div {
                 class: "btn btn-xs btn-ghost tracking-tighter font-bold",
+                class: if formatting() == Format::Hybrid {"btn-active"},
+                onclick: move |_| {
+                    *formatting.write() = Format::Hybrid
+                },
+                "Hybrid",
+            }
+            div {
+                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
+                class: if formatting() == Format::Hex {"btn-active"},
+                onclick: move |_| {
+                    *formatting.write() = Format::Hex
+                },
                 "Hex",
-            }
-            div {
-                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
-                "Decimal",
-            }
-            div {
-                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
-                "Text",
             }
         }
         div {
-            class: "text-xs p-4 h-full w-full overflow-auto",
-            "{text}",
+            class: "flex flex-wrap join p-4",
+            for field in fields {
+                div {
+                    class: "btn btn-xs btn-outline btn-secondary join-item",
+                    onmouseover: move |_| {
+                        *selected_field.write() = Some(field.clone());
+                    },
+                    if formatting() == Format::Hybrid {"{field.value}"} else {"{field.to_hex()}"}
+                }
+            }
         }
     }
 }

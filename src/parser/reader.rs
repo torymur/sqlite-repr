@@ -1,3 +1,5 @@
+use crate::parser::DBHeader;
+use crate::ui::header::Parts;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -30,37 +32,6 @@ impl Reader {
     pub fn get_header(&self) -> Result<DBHeader> {
         let mut header = [0; 100];
         header.clone_from_slice(&self.bytes[..100]);
-        Ok(DBHeader::new(header))
-    }
-}
-
-pub trait Parts: std::fmt::Debug {
-    fn label(&self) -> String;
-    fn desc(&self) -> String;
-    fn bytes(&self) -> Box<[u8]>;
-}
-
-impl Parts for DBHeader {
-    fn label(&self) -> String {
-        "Database Header".to_string()
-    }
-
-    fn desc(&self) -> String {
-        "The first 100 bytes of the database file comprise the database file header. All multibyte fields in the database file header are stored with the most significant byte first (big-endian).".to_string()
-    }
-
-    fn bytes(&self) -> Box<[u8]> {
-        Box::new(self.bytes)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DBHeader {
-    bytes: [u8; 100],
-}
-
-impl DBHeader {
-    pub fn new(bytes: [u8; 100]) -> Self {
-        Self { bytes }
+        Ok(DBHeader::try_from(&header)?)
     }
 }
