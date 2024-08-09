@@ -36,7 +36,7 @@ impl Parts for DBHeader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub desc: &'static str,
     pub offset: usize,
@@ -46,15 +46,23 @@ pub struct Field {
 
 impl Field {
     pub fn to_hex(&self) -> String {
+        let pretty_hex = |bytes: &[u8]| -> String {
+            bytes
+                .iter()
+                .map(|b| format!("{:02x}", b).to_uppercase())
+                //.map(|b| hex::encode(b).to_uppercase())
+                .collect::<Vec<String>>()
+                .join(" ")
+        };
         match &self.value {
-            Value::U8(v) => hex::encode(v.to_be_bytes()),
-            Value::U16(v) => hex::encode(v.to_be_bytes()),
-            Value::TEXT(v) => hex::encode(v.as_bytes()),
+            Value::U8(v) => pretty_hex(&v.to_be_bytes()),
+            Value::U16(v) => pretty_hex(&v.to_be_bytes()),
+            Value::TEXT(v) => pretty_hex(&v.as_bytes()),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     U8(u8),
     U16(u16),
@@ -66,7 +74,7 @@ impl fmt::Display for Value {
         match self {
             Self::U8(v) => write!(f, "{v}"),
             Self::U16(v) => write!(f, "{v}"),
-            Self::TEXT(v) => write!(f, "{v}"),
+            Self::TEXT(v) => write!(f, "{:?}", v),
         }
     }
 }
