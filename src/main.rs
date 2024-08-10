@@ -294,14 +294,20 @@ pub fn Visual() -> Element {
             }
         }
         div {
-            class: "flex flex-wrap px-4 pt-3 pb-4 text-xs",
+            class: "flex flex-wrap p-4 text-xs",
             for field in fields {
                 div {
-                    class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary mt-1",
-                    onmouseover: move |_| {
-                        *selected_field.write() = Some(field.clone());
-                    },
-                    FormattedValue {field: field.clone()}
+                    div {
+                        class: "mb-0 mt-1 leading-tight tracking-tighter font-medium text-green-700",
+                        "{field.offset}",
+                    }
+                    div {
+                        class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary border-t-2 border-green-700",
+                        onmouseover: move |_| {
+                            *selected_field.write() = Some(field.clone());
+                        },
+                        FormattedValue {field: field.clone()}
+                    }
                 }
             }
         }
