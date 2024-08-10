@@ -194,7 +194,7 @@ pub fn Description() -> Element {
         None => {
             rsx! {
                 div {
-                    class: "p-4 h-64 w-full overflow-auto",
+                    class: "p-4 h-72 w-full overflow-auto",
                     "{selected_part().desc()}"
                 }
             }
@@ -202,7 +202,7 @@ pub fn Description() -> Element {
         Some(field) => {
             rsx! {
                 div {
-                    class: "p-4 h-64 w-full",
+                    class: "p-4 h-72 w-full overflow-auto ",
                     div {
                         "{selected_part().desc()}"
                     }
@@ -294,10 +294,10 @@ pub fn Visual() -> Element {
             }
         }
         div {
-            class: "flex flex-wrap join p-4 text-xs",
+            class: "flex flex-wrap px-4 pt-3 pb-4 text-xs",
             for field in fields {
                 div {
-                    class: "p-1 outline outline-1 outline-secondary bg-primary join-item hover:bg-secondary",
+                    class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary mt-1",
                     onmouseover: move |_| {
                         *selected_field.write() = Some(field.clone());
                     },
