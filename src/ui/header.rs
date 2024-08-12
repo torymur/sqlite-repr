@@ -1,4 +1,6 @@
-//! UI related traits, data transformations and descriptons to simplify UI operations.
+//! UI related traits, data transformations and descriptons to simplify
+//! rendering of parsed structures.
+
 use core::fmt;
 
 use crate::parser::header::{DBHeader, TextEncoding};
@@ -48,7 +50,7 @@ impl Parts for DBHeader {
                 "Number of bytes to define unused (reserved) space at the end of each page, usually 0, could be odd. These bytes are used by extensions, for example, by the SQLite Encryption Extension to store a nonce and/or cryptographic checksum associated with each page. The 'usable size' of a database page is: Page size - Reserved space. It could be an odd number, but it's not allowed to be less than 480, which means that in this case reserved space size won't exceed 32.",
                 20,
                 1,
-                Value::U8(self.read_version),
+                Value::U8(self.reserved_page_space),
             ),
             Field::new(
                 "Maximum embedded payload fraction, must be 64. Intended to be tunable parameters that could be used to modify the storage format of the b-tree algorithm. However, that functionality is not supported and there are no current plans to add support in the future, thus these bytes are fixed at the specified values.",
@@ -93,7 +95,7 @@ impl Parts for DBHeader {
                 Value::U32(self.freelist_total),
             ),
             Field::new(
-                "The schema cookie, which is incremented whenever the database schema changes. A prepared statement is compiled against a specific version of t he database schema. When the database schema changes, the statement must be reprepared. When a prepared statement runs, it first checks the schema cookie to ensure the value is the same as when the statement was prepared and if the schema cookie has changed, the statement either automatically reprepares and reruns or it aborts with an SQLite schema error.",
+                "The schema cookie, which is incremented whenever the database schema changes. A prepared statement is compiled against a specific version of the database schema. When the database schema changes, the statement must be reprepared. When a prepared statement runs, it first checks the schema cookie to ensure the value is the same as when the statement was prepared and if the schema cookie has changed, the statement either automatically reprepares and reruns or it aborts with an SQLite schema error.",
                 40,
                 4,
                 Value::U32(self.schema_cookie),

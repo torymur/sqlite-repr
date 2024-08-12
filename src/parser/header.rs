@@ -1,3 +1,6 @@
+//! [Sqlite Database Header]<https://www.sqlite.org/fileformat2.html#the_database_header>
+//! Stored in the first 100 bytes of sqlite database file
+
 use crate::slc;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
