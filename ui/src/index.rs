@@ -8,7 +8,7 @@ use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
 
 #[component]
-pub fn Home() -> Element {
+pub fn Home(route: Vec<String>) -> Element {
     rsx! {
         Header { }
         Body { }
