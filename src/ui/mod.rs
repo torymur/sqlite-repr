@@ -1,4 +1,4 @@
 pub mod header;
-pub mod home;
+pub mod index;
 pub mod state;
 pub mod viewer;

@@ -5,7 +5,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::ui::header::{Field, Parts};
-use crate::ui::viewer::Viewer;
+use crate::ui::viewer::{Viewer, SIMPLE_DB};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
@@ -25,13 +25,12 @@ pub enum Format {
 
 impl AppState {
     pub fn init() -> Self {
-        let start_db_name = "Simple";
         // preloaded db shouldn't fail
-        let viewer = Viewer::new_from_included(start_db_name)
-            .expect("Viewer failed to init for preloaded db.");
+        let viewer =
+            Viewer::new_from_included(SIMPLE_DB).expect("Viewer failed to init for preloaded db.");
 
         AppState {
-            current_db: Signal::new(start_db_name.to_string()),
+            current_db: Signal::new(SIMPLE_DB.to_string()),
             selected_part: Signal::new(viewer.first_part()),
             selected_field: Signal::new(None),
             format: Signal::new(Format::Hybrid),

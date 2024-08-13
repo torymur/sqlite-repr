@@ -1,6 +1,10 @@
 //! [Sqlite Database Header]<https://www.sqlite.org/fileformat2.html#the_database_header>
 //! Stored in the first 100 bytes of sqlite database file
 
+#![allow(clippy::too_many_arguments)]
+
+use std::rc::Rc;
+
 use crate::slc;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,9 +40,9 @@ impl std::fmt::Display for TextEncoding {
 impl TextEncoding {
     pub fn to_be_bytes(&self) -> [u8; 4] {
         match self {
-            Self::UTF8 => (1 as u32).to_be_bytes(),
-            Self::UTF16le => (2 as u32).to_be_bytes(),
-            Self::UTF16be => (3 as u32).to_be_bytes(),
+            Self::UTF8 => 1_u32.to_be_bytes(),
+            Self::UTF16le => 2_u32.to_be_bytes(),
+            Self::UTF16be => 3_u32.to_be_bytes(),
         }
     }
 }
@@ -47,7 +51,7 @@ impl TextEncoding {
 pub struct DBHeader {
     /// should be 'SQLite format 3\0'
     /// offset: 0, size: 16
-    pub header: String,
+    pub header: Rc<String>,
     /// page size of database, value between 512 and 32768 inclusive
     /// 0x0001 for 65536
     /// offset: 16, size: 2
@@ -127,7 +131,7 @@ impl TryFrom<&[u8; 100]> for DBHeader {
     fn try_from(buf: &[u8; 100]) -> Result<Self, Self::Error> {
         Ok(Self::new(
             // header
-            std::str::from_utf8(&slc!(buf, 0, 16))?.to_string(),
+            Rc::new(std::str::from_utf8(&slc!(buf, 0, 16))?.to_string()),
             // page_size
             slc!(buf, 16, 2, u16),
             // write_version
@@ -178,7 +182,7 @@ impl TryFrom<&[u8; 100]> for DBHeader {
 
 impl DBHeader {
     pub fn new(
-        header: String,
+        header: Rc<String>,
         page_size: u16,
         write_version: u8,
         read_version: u8,

@@ -15,13 +15,18 @@ pub struct Viewer {
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-// Preloaded/included examples of databases to start UI with something
-pub const SIMPLE_DB: &'static [u8] = include_bytes!("../../examples/simple");
-pub const BIG_PAGE_DB: &'static [u8] = include_bytes!("../../examples/big_page");
+// Preloaded examples of databases to start UI with something
+pub const SIMPLE_DB_BYTES: &[u8] = include_bytes!("../../included/simple");
+pub const BIG_PAGE_DB_BYTES: &[u8] = include_bytes!("../../included/big_page");
+pub const SIMPLE_DB: &str = "Simple";
+pub const BIG_PAGE_DB: &str = "Big page";
 
 impl Viewer {
     pub fn new_from_included(name: &str) -> Result<Self> {
-        let included_db = HashMap::from([("Simple", SIMPLE_DB), ("Big Page", BIG_PAGE_DB)]);
+        let included_db = HashMap::from([
+            (SIMPLE_DB, SIMPLE_DB_BYTES),
+            (BIG_PAGE_DB, BIG_PAGE_DB_BYTES),
+        ]);
 
         let bytes = included_db.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;

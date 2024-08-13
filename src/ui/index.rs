@@ -38,17 +38,13 @@ pub fn Header() -> Element {
                 select {
                     class: "join-item select select-secondary select-bordered font-bold tracking-tighter",
                     oninput: move |e| {
-                        match e.value().as_str() {
-                            name => {
-                                *current_db.write() = name.to_string();
-                                // preloaded databases shouldn't fail
-                                let new_viewer = Viewer::new_from_included(name).expect("Viewer failed");
-                                let first_part = new_viewer.first_part();
-                                *selected_part.write() = first_part;
-                                *selected_field.write() = None;
-                                *viewer.write() = new_viewer;
-                            }
-                        };
+                        *current_db.write() = e.value().to_string();
+                        // preloaded databases shouldn't fail
+                        let new_viewer = Viewer::new_from_included(e.value().as_str()).expect("Viewer failed");
+                        let first_part = new_viewer.first_part();
+                        *selected_part.write() = first_part;
+                        *selected_field.write() = None;
+                        *viewer.write() = new_viewer;
                     },
                     for name in viewer.read().included_dbnames() {
                         option {

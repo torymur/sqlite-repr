@@ -2,22 +2,23 @@
 //! rendering of parsed structures.
 
 use core::fmt;
+use std::rc::Rc;
 
 use crate::parser::header::{DBHeader, TextEncoding};
 
 pub trait Parts: std::fmt::Debug {
-    fn label(&self) -> String;
-    fn desc(&self) -> String;
+    fn label(&self) -> &'static str;
+    fn desc(&self) -> &'static str;
     fn fields(&self) -> Vec<Field>;
 }
 
 impl Parts for DBHeader {
-    fn label(&self) -> String {
-        "Database Header".to_string()
+    fn label(&self) -> &'static str {
+        "Database Header"
     }
 
-    fn desc(&self) -> String {
-        "The first 100 bytes of the database file comprise the database file header. All multibyte fields in the database file header are stored with the most significant byte first (big-endian).".to_string()
+    fn desc(&self) -> &'static str {
+        "The first 100 bytes of the database file comprise the database file header. All multibyte fields in the database file header are stored with the most significant byte first (big-endian)."
     }
 
     fn fields(&self) -> Vec<Field> {
@@ -177,8 +178,7 @@ impl Field {
         let pretty_hex = |bytes: &[u8]| -> String {
             bytes
                 .iter()
-                .map(|b| format!("{:02x}", b).to_uppercase())
-                //.map(|b| hex::encode(b).to_uppercase())
+                .map(|b| format!("{:02X}", b))
                 .collect::<Vec<String>>()
                 .join(" ")
         };
@@ -186,7 +186,7 @@ impl Field {
             Value::U8(v) => pretty_hex(&v.to_be_bytes()),
             Value::U16(v) => pretty_hex(&v.to_be_bytes()),
             Value::U32(v) => pretty_hex(&v.to_be_bytes()),
-            Value::TEXT(v) => pretty_hex(&v.as_bytes()),
+            Value::TEXT(v) => pretty_hex(v.as_bytes()),
             Value::BOOL(v) => pretty_hex(&v.to_be_bytes()),
             Value::ARRAY(v) => pretty_hex(v),
             Value::ENCODING(v) => pretty_hex(&v.to_be_bytes()),
@@ -200,7 +200,7 @@ pub enum Value {
     U8(u8),
     U16(u16),
     U32(u32),
-    TEXT(String),
+    TEXT(Rc<String>),
     BOOL(u32),
     ARRAY(Box<[u8]>),
     ENCODING(TextEncoding),

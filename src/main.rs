@@ -3,8 +3,11 @@
 use dioxus::prelude::*;
 use dioxus_logger::tracing::Level;
 
-use sqlite_repr::ui::home::Home;
-use sqlite_repr::ui::state::AppState;
+use crate::ui::index::Home;
+use crate::ui::state::AppState;
+
+pub mod parser;
+pub mod ui;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
@@ -18,7 +21,7 @@ fn main() {
 }
 
 fn App() -> Element {
-    use_context_provider(|| AppState::init());
+    use_context_provider(AppState::init);
     rsx! {
         Router::<Route> {}
     }

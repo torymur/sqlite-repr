@@ -1,15 +1,20 @@
 .PHONY: setup
-setup:
-	rm -rf examples/
-	mkdir examples
+setup: included included/simple included/big_page
+	
+included:
+	mkdir $@
 
-	sqlite3 examples/simple \
-		'drop table if exists simple' \
+included/simple:
+	sqlite3 $@ \
 		'create table simple(int)' \
 		'insert into simple values(1),(2),(3),(4)'
-	
-	sqlite3 examples/big_page \
+
+included/big_page:
+	sqlite3 $@ \
 		-cmd 'PRAGMA page_size=65536' \
-		'drop table if exists big_page' \
 		'create table big_page(int)' \
 		'insert into big_page values(1),(2),(3),(4)'
+
+.PHONY: clean
+clean:
+	rm -rf included
