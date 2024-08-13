@@ -1,20 +1,6 @@
-[package]
-name = "sqlite-repr"
-version = "0.1.0"
-authors = ["Victoria Terenina (torymur) <torymur@gmail.com>"]
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-
-dioxus = { version = "0.5", features = ["web", "router"] }
-manganis = { version = "0.2.2"}
-futures-channel = { version = "0.3.30"}
-js-sys = {version = "0.3.69"}
-wasm-bindgen = {version = "0.2.92"}
-web-sys = {version = "0.3.69"}
-hex = {version = "0.4.3"}
-
-# Debug
-dioxus-logger = "0.5.1"
+[workspace]
+members = [
+  "parser",
+  "ui",
+]
+resolver = "2"

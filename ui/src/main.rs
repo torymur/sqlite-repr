@@ -3,11 +3,13 @@
 use dioxus::prelude::*;
 use dioxus_logger::tracing::Level;
 
-use crate::ui::index::Home;
-use crate::ui::state::AppState;
+use crate::index::Home;
+use crate::state::AppState;
 
-pub mod parser;
-pub mod ui;
+pub mod header;
+pub mod index;
+pub mod state;
+pub mod viewer;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {

@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use crate::ui::header::{Field, Parts};
-use crate::ui::viewer::{Viewer, SIMPLE_DB};
+use crate::header::{Field, Parts};
+use crate::viewer::{Viewer, SIMPLE_DB};
 
 #[derive(Clone, Debug)]
 pub struct AppState {

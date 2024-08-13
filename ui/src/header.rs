@@ -4,7 +4,7 @@
 use core::fmt;
 use std::rc::Rc;
 
-use crate::parser::header::{DBHeader, TextEncoding};
+use parser::header::{DBHeader, TextEncoding};
 
 pub trait Parts: std::fmt::Debug {
     fn label(&self) -> &'static str;

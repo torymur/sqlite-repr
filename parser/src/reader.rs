@@ -1,4 +1,4 @@
-use crate::parser::DBHeader;
+use crate::DBHeader;
 use std::rc::Rc;
 
 #[derive(Debug)]

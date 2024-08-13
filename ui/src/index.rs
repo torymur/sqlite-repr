@@ -3,9 +3,9 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
 
-use crate::ui::header::Field;
-use crate::ui::state::{AppState, Format};
-use crate::ui::viewer::Viewer;
+use crate::header::Field;
+use crate::state::{AppState, Format};
+use crate::viewer::Viewer;
 
 #[component]
 pub fn Home() -> Element {

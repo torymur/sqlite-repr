@@ -1,32 +1,9 @@
-# SQLite3 Visual Representation
+## SQLite3 Representation
 
-Describes on-disk [database file format](https://www.sqlite.org/fileformat2.html) used by all releases of SQLite since version 3.0.0 for software development and troubleshooting, to study format of SQLite databases for academic purposes, etc.
+[SQLite](https://www.sqlite.org/) is a C-language library that implements a small, fast, self-contained, high-reliability, full-featured, SQL database engine. SQLite is the most used database engine in the world, built into all mobile phones and most computers and comes bundled inside countless other applications that people use every day.
 
-# Development
 
-1. Install npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-2. Install the tailwind css cli: https://tailwindcss.com/docs/installation
-3. Install daisyUI and official Tailwind CSS Typography plugin:
-```bash
-npm i -D daisyui@latest @tailwindcss/typography
+The SQLite file format is stable, cross-platform and backwards compatible, the developers pledge to keep it that way through the year 2050.
 
-```
-4. Run the following command in the root of the project to start the tailwind CSS compiler:
 
-```bash
-npx tailwindcss -i ./input.css -o ./assets/tailwind.css --watch
-```
-
-5. In the root of the project create database examples:
-
-```bash
-make setup
-```
-
-6. Run the following command in the root of the project to start the Dioxus dev server:
-
-```bash
-dx serve --hot-reload
-```
-
-7. Open the browser to http://localhost:8080
+All that makes it interesting to peek into their on-disk [database file format](https://www.sqlite.org/fileformat2.html) to understand it for software development objective and troubleshooting reasons, as well as to study format of SQLite databases for academic purposes or regular self-education.
