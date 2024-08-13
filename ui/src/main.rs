@@ -13,12 +13,17 @@ pub mod viewer;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
-    #[route("/")]
-    Home {},
+    #[route("/:..route")]
+    Home { route: Vec<String> },
 }
 
 fn main() {
+    #[cfg(debug_assertions)]
     dioxus_logger::init(Level::INFO).expect("Failed to init logger.");
+
+    #[cfg(not(debug_assertions))]
+    dioxus_logger::init(Level::ERROR).expect("Failed to init logger.");
+
     launch(App);
 }
 

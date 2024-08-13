@@ -1,0 +1,52 @@
+name: dioxus-on-github-pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: wasm32-unknown-unknown
+          override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Dioxus-CLI
+        shell: bash
+        run: cargo install dioxus-cli
+
+      - name: Build Project ────⋆⋅☆⋅⋆──
+        shell: bash
+        run: cd ui/ && dx build --release && cp ./dist/index.html ./dist/404.html
+
+      - name: Deploy Project ❀
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          branch: gh-pages
+          folder: ui/dist
+          clean: false
