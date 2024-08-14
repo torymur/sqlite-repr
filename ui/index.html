@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>sqlite-repr</title>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="tailwind.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+</head>
+<body>
+  <div id="main"></div>
+  <script type="module" class="custom-paths">
+    import init from "/sqlite-repr/assets/dioxus/sqlite-repr.js";
+    init("/sqlite-repr/assets/dioxus/sqlite-repr_bg.wasm").then(wasm => {
+      if (wasm.__wbindgen_start == undefined) {
+        wasm.main();
+      }
+    });
+  </script>
+  
+</body>
+</html>

@@ -28,6 +28,17 @@ pub fn Header() -> Element {
                 class: "text-xl font-bold tracking-tighter pl-4",
                 "SQLite File Format",
             }
+            div {
+                class: "pl-4 tooltip tooltip-right",
+                "data-tip": "Like the project? Give us a star ☆",
+                a {
+                    href: "https://github.com/torymur/sqlite-repr",
+                    img {
+                        class: "h-6 object-scale-down",
+                        src: "./github-mark.png"
+                    }
+                }
+            }
             div { class: "flex-grow" }
             div {
                 class: "join",
@@ -125,7 +136,7 @@ pub fn Description() -> Element {
         None => {
             rsx! {
                 div {
-                    class: "p-4 h-72 w-full overflow-auto",
+                    class: "p-4 h-80 w-full overflow-auto",
                     "{selected_part().desc()}"
                 }
             }
@@ -133,7 +144,7 @@ pub fn Description() -> Element {
         Some(field) => {
             rsx! {
                 div {
-                    class: "p-4 h-72 w-full overflow-auto ",
+                    class: "p-4 h-80 w-full overflow-auto ",
                     div {
                         "{selected_part().desc()}"
                     }

@@ -41,7 +41,7 @@ jobs:
 
       - name: ───⋆⋅☆⋅⋆─ Build Project ─⋆⋅☆⋅⋆───
         shell: bash
-        run: cd ui/ && dx build --release && cp ./dist/index.html ./dist/404.html
+        run: cd ui/ && dx build --release && cp ./index.html ./dist/index.html && cp ./index.html ./dist/404.html
 
       - name: Deploy Project
         uses: JamesIves/github-pages-deploy-action@v4.4.1
