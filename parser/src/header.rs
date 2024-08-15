@@ -55,7 +55,7 @@ pub struct DBHeader {
     /// page size of database, value between 512 and 32768 inclusive
     /// 0x0001 for 65536
     /// offset: 16, size: 2
-    pub page_size: u16,
+    pub page_size: u64,
     /// 1 for legacy, 2 for WAL
     /// offset: 18, size: 1
     pub write_version: u8,
@@ -210,7 +210,7 @@ impl DBHeader {
         reserved_for_expansion.copy_from_slice(reserved_for_expansion_slice);
         Self {
             header,
-            page_size,
+            page_size: Self::to_page_size(page_size),
             write_version,
             read_version,
             reserved_page_space,
@@ -232,6 +232,15 @@ impl DBHeader {
             reserved_for_expansion,
             version_valid_for_number,
             version,
+        }
+    }
+
+    /// Field stores only 2 bytes, to max value to represent is 65535
+    /// To specify page size of value 65536 - 0x0001 value is used
+    fn to_page_size(value: u16) -> u64 {
+        match value {
+            1 => 65536,
+            v => v as u64,
         }
     }
 }
