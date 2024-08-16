@@ -47,7 +47,7 @@ impl TextEncoding {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DBHeader {
     /// should be 'SQLite format 3\0'
     /// offset: 0, size: 16
