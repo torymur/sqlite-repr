@@ -10,5 +10,3 @@ All that makes it interesting to peek into their on-disk [database file format](
 
 ### Visual
 WIP available at https://torymur.github.io/sqlite-repr/
-
-![dbheader-example](https://github.com/user-attachments/assets/a21f312b-140d-4cb5-93d0-f7753f65a1d3)

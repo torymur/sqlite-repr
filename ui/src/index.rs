@@ -1,11 +1,13 @@
 //! Main UI page.
 
 #![allow(non_snake_case)]
+
 use dioxus::prelude::*;
 
-use crate::header::Field;
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
+
+use crate::Field;
 
 #[component]
 pub fn Home(route: Vec<String>) -> Element {
@@ -18,6 +20,7 @@ pub fn Home(route: Vec<String>) -> Element {
 pub fn Header() -> Element {
     let mut current_db = use_context::<AppState>().current_db;
     let mut viewer = use_context::<AppState>().viewer;
+    let mut selected_page = use_context::<AppState>().selected_page;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
 
@@ -52,8 +55,9 @@ pub fn Header() -> Element {
                         *current_db.write() = e.value().to_string();
                         // preloaded databases shouldn't fail
                         let new_viewer = Viewer::new_from_included(e.value().as_str()).expect("Viewer failed");
-                        let first_part = new_viewer.first_part();
-                        *selected_part.write() = first_part;
+                        let first_page = new_viewer.first_page();
+                        *selected_page.write() = first_page;
+                        *selected_part.write() = None;
                         *selected_field.write() = None;
                         *viewer.write() = new_viewer;
                     },
@@ -100,27 +104,40 @@ pub fn Body() -> Element {
 
 pub fn SideBar() -> Element {
     let viewer = use_context::<AppState>().viewer;
-    let parts = viewer.read().parts.clone();
+    let pages = viewer.read().pages.clone();
+    let mut selected_page = use_context::<AppState>().selected_page;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
+
     rsx! {
         div {
             class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit",
             div {
                 class: "font-bold truncate pb-4",
-                "Structure",
+                "B-tree Pages",
             }
             ul {
-                for part in parts {
-                    li {
-                        button {
-                            class: "w-full text-left btn-sm btn-ghost btn-block font-normal truncate",
-                            class: if *selected_part.read().label() == *part.label() {"btn-active"},
-                            onclick: move |_| {
-                                *selected_part.write() = part.clone();
-                                *selected_field.write() = None;
-                            },
-                            "✦ {&part.label()}",
+                for (n, page) in pages.into_iter().enumerate() {
+                    div {
+                        class: "flex",
+                        div {
+                            class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
+                            // page offset
+                            "{&page.page_size() * n as u64}",
+                        }
+                        li {
+                            button {
+                                class: "w-full h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
+                                class: if *selected_page.read().label() == *page.label() {"btn-active"},
+                                onclick: move |_| {
+                                    *selected_page.write() = page.clone();
+                                    *selected_part.write() = None;
+                                    *selected_field.write() = None;
+                                },
+                                "Page {n+1}",
+                                br {}
+                                "{&page.label()}",
+                            }
                         }
                     }
                 }
@@ -130,34 +147,46 @@ pub fn SideBar() -> Element {
 }
 
 pub fn Description() -> Element {
+    let selected_page = use_context::<AppState>().selected_page;
     let selected_part = use_context::<AppState>().selected_part;
     let selected_field = use_context::<AppState>().selected_field;
+    let (part_desc, part_label) = match selected_part() {
+        None => ("", ""),
+        Some(p) => (p.desc(), p.label()),
+    };
     match selected_field() {
         None => {
             rsx! {
                 div {
                     class: "p-4 h-80 w-full overflow-auto",
-                    "{selected_part().desc()}"
+                    "{selected_page().desc()}"
                 }
             }
         }
         Some(field) => {
             rsx! {
                 div {
-                    class: "p-4 h-80 w-full overflow-auto ",
+                    class: "p-4 h-80 w-full overflow-auto text-sm",
                     div {
-                        "{selected_part().desc()}"
+                        "{selected_page().desc()}"
                     }
                     div {
-                        class: "flex pt-6 text-sm space-x-6",
+                        class: "text-lg text-center divider",
+                        "{part_label}"
+                    }
+                    div {
+                        "{part_desc}"
+                    }
+                    div {
+                        class: "flex pt-6 text-xs space-x-6",
                         div {
-                            class: "w-1/2",
+                            class: "w-2/3",
                             "{field.desc}"
                         }
                         div {
-                            class: "overflow-auto w-1/2",
+                            class: "overflow-auto w-1/3",
                             table {
-                                class: "table table-sm",
+                                class: "table table-xs",
                                 tbody {
                                     tr {
                                         td {
@@ -202,9 +231,10 @@ pub fn Description() -> Element {
 }
 
 pub fn Visual() -> Element {
-    let selected_part = use_context::<AppState>().selected_part;
-    let fields = selected_part().fields();
+    let selected_page = use_context::<AppState>().selected_page;
+    let parts = selected_page().parts();
     let mut selected_field = use_context::<AppState>().selected_field;
+    let mut selected_part = use_context::<AppState>().selected_part;
     let mut formatting = use_context::<AppState>().format;
     rsx! {
         div {
@@ -237,18 +267,25 @@ pub fn Visual() -> Element {
         }
         div {
             class: "flex flex-wrap p-4 text-xs",
-            for field in fields {
-                div {
+            for part in parts {
+                for field in part.fields() {
                     div {
-                        class: "mb-0 mt-1 leading-tight tracking-tighter font-medium text-green-700",
-                        "{field.offset}",
-                    }
-                    div {
-                        class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary border-t-2 border-green-700",
-                        onmouseover: move |_| {
-                            *selected_field.write() = Some(field.clone());
-                        },
-                        FormattedValue {field: field.clone()}
+                        div {
+                            class: "mb-0 mt-1 leading-tight tracking-tighter font-medium text-{part.color()}-800",
+                            "{field.offset}",
+                        }
+                        div {
+                            class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary border-t-4 border-{part.color()}-800",
+                            onmouseover:
+                            {
+                                let part = part.clone();
+                                move |_| {
+                                    *selected_field.write() = Some(field.clone());
+                                    *selected_part.write() = Some(part.clone());
+                                }
+                            },
+                            FormattedValue {field: field.clone()}
+                        }
                     }
                 }
             }

@@ -4,13 +4,15 @@ use std::collections::HashMap;
 use std::include_bytes;
 use std::rc::Rc;
 
-use crate::header::Parts;
+use crate::Page;
 use parser::Reader;
+
+use crate::pages::RootPage;
 
 #[derive(Debug)]
 pub struct Viewer {
     pub included_db: HashMap<&'static str, &'static [u8]>,
-    pub parts: Vec<Rc<dyn Parts>>,
+    pub pages: Vec<Rc<dyn Page>>,
 }
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -31,18 +33,20 @@ impl Viewer {
         let bytes = included_db.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;
 
-        let header: Rc<dyn Parts> = reader.header.clone();
-        let parts = vec![header];
+        let db_header = reader.get_db_header()?;
+        let page_header = reader.get_page_header(1)?;
+        let root_page: Rc<dyn Page> = Rc::new(RootPage::new(db_header, page_header));
+        let pages = vec![root_page];
 
-        Ok(Self { included_db, parts })
+        Ok(Self { included_db, pages })
     }
 
     pub fn included_dbnames(&self) -> Vec<String> {
         self.included_db.keys().map(|k| k.to_string()).collect()
     }
 
-    pub fn first_part(&self) -> Rc<dyn Parts> {
+    pub fn first_page(&self) -> Rc<dyn Page> {
         // Having at least one part is guaranteed by `new_from_...` construct
-        self.parts[0].clone()
+        self.pages[0].clone()
     }
 }

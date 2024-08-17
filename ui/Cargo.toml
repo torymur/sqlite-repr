@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Victoria Terenina (torymur) <torymur@gmail.com>"]
 edition = "2021"
 
+[[bin]]
+name = "ui"
+path = "src/main.rs"
+
+[lib]
+name = "ui"
+path = "src/lib.rs"
+
 
 [dependencies]
 dioxus = { version = "0.5", features = ["web", "router"] }

@@ -4,15 +4,16 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use crate::header::{Field, Parts};
 use crate::viewer::{Viewer, SIMPLE_DB};
+use crate::{Field, Page, Part};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub current_db: Signal<String>,
     pub viewer: Signal<Viewer>,
-    pub selected_part: Signal<Rc<dyn Parts>>,
+    pub selected_page: Signal<Rc<dyn Page>>,
     pub selected_field: Signal<Option<Field>>,
+    pub selected_part: Signal<Option<Rc<dyn Part>>>,
     pub format: Signal<Format>,
 }
 
@@ -31,7 +32,8 @@ impl AppState {
 
         AppState {
             current_db: Signal::new(SIMPLE_DB.to_string()),
-            selected_part: Signal::new(viewer.first_part()),
+            selected_page: Signal::new(viewer.first_page()),
+            selected_part: Signal::new(None),
             selected_field: Signal::new(None),
             format: Signal::new(Format::Hybrid),
             viewer: Signal::new(viewer),
