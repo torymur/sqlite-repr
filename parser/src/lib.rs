@@ -1,11 +1,13 @@
 //! Experimentation around sqlite internal format parsing, based on https://www.sqlite.org/fileformat2.html
 
+pub mod cell;
 pub mod header;
 pub mod page;
 pub mod reader;
 
+pub use cell::{CellPointer, CELL_PTR_SIZE};
 pub use header::DBHeader;
-pub use page::PageHeader;
+pub use page::{Page, PageHeader, PageHeaderType};
 pub use reader::Reader;
 
 #[macro_export]

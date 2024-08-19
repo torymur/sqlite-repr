@@ -1,5 +1,8 @@
 //! BTree Page exploration
-use crate::slc;
+use crate::{slc, CellPointer, CELL_PTR_SIZE};
+
+const PAGE_HEADER_SIZE: usize = 12;
+const PAGE_RIGHT_PTR_SIZE: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PageHeaderType {
@@ -10,11 +13,8 @@ pub enum PageHeaderType {
 }
 
 impl PageHeaderType {
-    fn is_interior(&self) -> bool {
-        match self {
-            Self::InteriorIndex | Self::InteriorTable => true,
-            _ => false,
-        }
+    pub fn is_interior(&self) -> bool {
+        matches!(self, Self::InteriorIndex | Self::InteriorTable)
     }
 }
 
@@ -96,10 +96,10 @@ impl PageHeader {
     }
 }
 
-impl TryFrom<&[u8; 12]> for PageHeader {
+impl TryFrom<&[u8]> for PageHeader {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(buf: &[u8; 12]) -> Result<Self, Self::Error> {
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let page_type = PageHeaderType::try_from(slc!(buf, 0, 1, u8))?;
         Ok(PageHeader::new(
             page_type,
@@ -116,5 +116,45 @@ impl TryFrom<&[u8; 12]> for PageHeader {
             // page_num ptr (only if page type is interior node)
             page_type.is_interior().then_some(slc!(buf, 8, 4, u32)),
         ))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Page {
+    pub page_header: PageHeader,
+    pub cell_pointer: CellPointer,
+    pub cell_pointer_offset: usize,
+}
+
+impl Page {
+    pub fn new(
+        page_header: PageHeader,
+        cell_pointer: CellPointer,
+        cell_pointer_offset: usize,
+    ) -> Self {
+        Self {
+            page_header,
+            cell_pointer,
+            cell_pointer_offset,
+        }
+    }
+}
+
+impl TryFrom<&Vec<u8>> for Page {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(buf: &Vec<u8>) -> Result<Self, Self::Error> {
+        let page_header = PageHeader::try_from(&buf[0..PAGE_HEADER_SIZE])?;
+
+        // For leaf pages page header is actually 8, not 12 bytes
+        let ptr_offset = if page_header.page_type.is_interior() {
+            PAGE_HEADER_SIZE
+        } else {
+            PAGE_HEADER_SIZE - PAGE_RIGHT_PTR_SIZE
+        };
+        let ptrs_size = page_header.cell_num as usize * CELL_PTR_SIZE;
+        let cell_pointer = CellPointer::try_from(&buf[ptr_offset..ptr_offset + ptrs_size])?;
+
+        Ok(Page::new(page_header, cell_pointer, ptr_offset))
     }
 }

@@ -1,80 +1,79 @@
-use crate::{DBHeader, PageHeader};
+use crate::{DBHeader, Page};
 
 const DB_HEADER_SIZE: usize = 100;
-const PAGE_HEADER_SIZE: usize = 12;
 
 #[derive(Debug)]
 pub struct Reader {
     pub bytes: &'static [u8],
+    pub db_header: DBHeader,
 }
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 impl Reader {
     pub fn new(bytes: &'static [u8]) -> Result<Self> {
-        Ok(Self { bytes })
-    }
-
-    /// Get db header, located in the first 100 bytes of the root page
-    pub fn get_db_header(&self) -> Result<DBHeader> {
-        if self.bytes.len() < DB_HEADER_SIZE {
+        if bytes.len() < DB_HEADER_SIZE {
             return Err(Self::incomplete(
                 "read",
                 "database header",
                 DB_HEADER_SIZE,
-                self.bytes.len(),
+                bytes.len(),
             ));
         }
+
         let mut bheader = [0; DB_HEADER_SIZE];
-        bheader.clone_from_slice(&self.bytes[..DB_HEADER_SIZE]);
-        DBHeader::try_from(&bheader)
+        bheader.clone_from_slice(&bytes[..DB_HEADER_SIZE]);
+        let db_header = DBHeader::try_from(&bheader)?;
+
+        Ok(Self { bytes, db_header })
     }
 
-    /// Get page header of a given page
-    pub fn get_page_header(&self, page_num: usize) -> Result<PageHeader> {
-        let header = self.get_db_header()?;
-        let pages_total = self.pages_total(&header);
-        if page_num > pages_total.into() {
-            return Err(format!("Out of bounds page access: {}/{}", page_num, pages_total).into());
-        }
-        // first page header should be read with offset of 100 (db header)
-        let offset = (Self::page_num(page_num)? * header.page_size as usize).max(DB_HEADER_SIZE);
+    /// Get fully parsed Page.
+    pub fn get_page(&self, page_num: usize) -> Result<Page> {
+        self.validate_page_bounds(page_num)?;
 
-        if self.bytes.len() < offset + PAGE_HEADER_SIZE {
-            return Err(Self::incomplete(
-                "read",
-                "page header",
-                offset + PAGE_HEADER_SIZE,
-                self.bytes.len(),
-            ));
-        }
-
-        let mut bheader = [0; PAGE_HEADER_SIZE];
-        bheader.clone_from_slice(&self.bytes[offset..offset + PAGE_HEADER_SIZE]);
-        PageHeader::try_from(&bheader)
+        let page_offset = self.page_offset(page_num);
+        let page_size = self.db_header.page_size as usize;
+        let mut b_page = vec![0; page_size];
+        b_page.clone_from_slice(&self.bytes[page_offset..page_offset + page_size]);
+        let page = Page::try_from(&b_page)?;
+        Ok(page)
     }
 
-    pub fn pages_total(&self, header: &DBHeader) -> usize {
+    /// Get an actual number of total pages per database file.
+    pub fn pages_total(&self) -> usize {
         // Based on docs descriptions, db_size is valid only if:
         // - it's not zero
         // - AND file_change_counter == version_valid_for_number
         //
         // Otherwise, decision is made by looking at the actual db size.
 
-        if header.db_size != 0 && header.file_change_counter == header.version_valid_for_number {
-            header.db_size as usize
+        if self.db_header.db_size != 0
+            && self.db_header.file_change_counter == self.db_header.version_valid_for_number
+        {
+            self.db_header.db_size as usize
         } else {
-            self.bytes.len() / header.page_size as usize
+            self.bytes.len() / self.db_header.page_size as usize
         }
     }
 
-    fn page_num(page_num: usize) -> Result<usize> {
+    fn validate_page_bounds(&self, page_num: usize) -> Result<()> {
+        let pages_total = self.pages_total();
         // SQLite pages are started from 1
-        // Helps simplify math for reading pointers of interior pages
-        match page_num {
-            0 => Err("SQLite pages start from 1".into()),
-            v => Ok(v - 1),
+        if page_num > pages_total || page_num == 0 {
+            return Err(format!("Out of bounds page access: {}/{}", page_num, pages_total).into());
         }
+
+        let page_end = self.page_offset(page_num) + self.db_header.page_size as usize;
+        if self.bytes.len() < page_end {
+            return Err(Self::incomplete("read", "page", page_end, self.bytes.len()));
+        }
+        Ok(())
+    }
+
+    fn page_offset(&self, page_num: usize) -> usize {
+        // "Index perspective" helps simplify math of pointers to interior pages
+        ((page_num - 1) * self.db_header.page_size as usize).max(DB_HEADER_SIZE)
     }
 
     fn incomplete(op: &str, what: &str, expected: usize, got: usize) -> Box<dyn std::error::Error> {
