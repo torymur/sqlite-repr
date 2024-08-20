@@ -43,9 +43,7 @@ impl BtreePage for RootPage {
             Rc::new(DBHeaderPart {
                 header: self.db_header.clone(),
             }),
-            Rc::new(PageHeaderPart {
-                header: Rc::new(self.page.page_header.clone()),
-            }),
+            Rc::new(PageHeaderPart::new(self.page.page_header.clone(), true)),
             Rc::new(CellPointerPart::new(
                 self.page.cell_pointer.clone(),
                 self.page.cell_pointer_offset,
@@ -91,9 +89,7 @@ impl BtreePage for AnyPage {
 
     fn parts(&self) -> Vec<Rc<dyn Part>> {
         vec![
-            Rc::new(PageHeaderPart {
-                header: Rc::new(self.page.page_header.clone()),
-            }),
+            Rc::new(PageHeaderPart::new(self.page.page_header.clone(), false)),
             Rc::new(CellPointerPart::new(
                 self.page.cell_pointer.clone(),
                 self.page.cell_pointer_offset,
@@ -110,6 +106,16 @@ impl BtreePage for AnyPage {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PageHeaderPart {
     pub header: Rc<PageHeader>,
+    pub offset: usize,
+}
+
+impl PageHeaderPart {
+    pub fn new(header: PageHeader, root: bool) -> Self {
+        Self {
+            header: Rc::new(header),
+            offset: if root { DB_HEADER_SIZE } else { 0 },
+        }
+    }
 }
 
 impl Part for PageHeaderPart {
@@ -129,13 +135,13 @@ impl Part for PageHeaderPart {
         let mut fields = vec![
             Field::new(
                 "B-tree page type. 2 (0x02) means the page is an interior index b-tree page, 5 (0x05): interior table b-tree page, 10 (0x0a): leaf index b-tree page, 13 (0x0d): leaf table b-tree page. Any other value for the b-tree page type is an error.",
-                100,
+                self.offset,
                 1,
                 Value::PageType(self.header.page_type)
             ),
             Field::new(
                 "Start of the first freeblock on the page or zero if there are no freeblocks. A freeblock is a structure used to identify unallocated space within a b-tree page. Freeblocks are organized as a chain. The first 2 bytes of a freeblock are a big-endian integer which is the offset in the b-tree page of the next freeblock in the chain, or zero if the freeblock is the last on the chain. The third and fourth bytes of each freeblock form a big-endian integer which is the size of the freeblock in bytes, including the 4-byte header. Freeblocks are always connected in order of increasing offset. The second field of the b-tree page header is the offset of the first freeblock, or zero if there are no freeblocks on the page. In a well-formed b-tree page, there will always be at least one cell before the first freeblock.A freeblock requires at least 4 bytes of space.",
-                101,
+                self.offset + 1,
                 2,
                 {
                     match self.header.free_block_offset {
@@ -146,19 +152,19 @@ impl Part for PageHeaderPart {
             ),
             Field::new(
                 "Number of cells on the page. A page might contain no cells, which is only possible for a root page of a table that contains no rows. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array.",
-                103,
+                self.offset + 3,
                 2,
                 Value::U16(self.header.cell_num)
             ),
             Field::new(
                 "Start of the cell content area. A zero value for this integer is interpreted as 65536. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array. If a page contains no cells, then the offset to the cell content area will equal the page size minus the bytes of reserved space.",
-                105,
+                self.offset + 5,
                 2,
                 Value::CellStartOffset(self.header.cell_start_offset)
             ),
             Field::new(
                 "The number of fragmented free bytes within the cell content area. If there is an isolated group of 1, 2, or 3 unused bytes within the cell content area, those bytes comprise a fragment. The total number of bytes in all fragments is stored in the fifth field of the b-tree page header. In a well-formed b-tree page, the total number of bytes in fragments may not exceed 60. The total amount of free space on a b-tree page consists of the size of the unallocated region plus the total size of all freeblocks plus the number of fragmented free bytes. SQLite may from time to time reorganize a b-tree page so that there are no freeblocks or fragment bytes, all unused bytes are contained in the unallocated space region, and all cells are packed tightly at the end of the page. This is called 'defragmenting' the b-tree page.",
-                107,
+                self.offset + 7,
                 1,
                 Value::U8(self.header.fragmented_free_bytes)
             ),
@@ -168,7 +174,7 @@ impl Part for PageHeaderPart {
             Some(v) => {
                 let page_num = Field::new(
                     "The right-most pointer. This value appears in the header of interior b-tree pages only and is omitted from all other pages.",
-                    108,
+                    self.offset + 8,
                     4,
                     Value::U32(v),
                 );
