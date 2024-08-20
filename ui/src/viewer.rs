@@ -7,7 +7,7 @@ use std::rc::Rc;
 use crate::BtreePage;
 use parser::Reader;
 
-use crate::pages::RootPage;
+use crate::pages::{AnyPage, RootPage};
 
 #[derive(Debug)]
 pub struct Viewer {
@@ -35,9 +35,16 @@ impl Viewer {
 
         let bytes = included_db.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;
-        let page = reader.get_page(1)?;
-        let root_page: Rc<dyn BtreePage> = Rc::new(RootPage::new(reader.db_header, page));
-        let pages = vec![root_page];
+        let db_header = Rc::new(reader.db_header.clone());
+        let first_page = reader.get_page(1)?;
+        let root_page: Rc<dyn BtreePage> =
+            Rc::new(RootPage::new(db_header.clone(), first_page.clone()));
+        let mut pages = vec![root_page];
+        for n in 2..reader.pages_total() + 1 {
+            let page = reader.get_page(n)?;
+            let any_page: Rc<dyn BtreePage> = Rc::new(AnyPage::new(db_header.clone(), page, n));
+            pages.push(any_page);
+        }
 
         Ok(Self { included_db, pages })
     }

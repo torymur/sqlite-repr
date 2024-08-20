@@ -10,20 +10,26 @@ use crate::{BtreePage, Field, Part, Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RootPage {
+    id: usize,
     db_header: Rc<DBHeader>,
     page: Rc<Page>,
 }
 
 impl RootPage {
-    pub fn new(db_header: DBHeader, page: Page) -> Self {
+    pub fn new(db_header: Rc<DBHeader>, page: Page) -> Self {
         Self {
-            db_header: Rc::new(db_header),
+            db_header: db_header.clone(),
             page: Rc::new(page),
+            id: 1,
         }
     }
 }
 
 impl BtreePage for RootPage {
+    fn id(&self) -> usize {
+        self.id
+    }
+
     fn label(&self) -> String {
         format!("Root {}", self.page.page_header.page_type)
     }
@@ -44,6 +50,54 @@ impl BtreePage for RootPage {
                 self.page.cell_pointer.clone(),
                 self.page.cell_pointer_offset,
                 true,
+            )),
+        ]
+    }
+
+    fn page_size(&self) -> u64 {
+        self.db_header.page_size
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnyPage {
+    id: usize,
+    db_header: Rc<DBHeader>,
+    page: Rc<Page>,
+}
+
+impl AnyPage {
+    pub fn new(db_header: Rc<DBHeader>, page: Page, id: usize) -> Self {
+        Self {
+            db_header: db_header.clone(),
+            page: Rc::new(page),
+            id,
+        }
+    }
+}
+
+impl BtreePage for AnyPage {
+    fn id(&self) -> usize {
+        self.id
+    }
+
+    fn label(&self) -> String {
+        format!("{}", self.page.page_header.page_type)
+    }
+
+    fn desc(&self) -> &'static str {
+        "A b-tree page is either an interior page or a leaf page. A b-tree page is either a table b-tree page or an index b-tree page. All pages within each complete b-tree are of the same type: either table or index. A leaf page contains keys and in the case of a table b-tree each key has associated data. An interior page contains K keys together with K+1 pointers to child b-tree pages. A'pointer' in an interior b-tree page is just the 32-bit unsigned integer page number of the child page."
+    }
+
+    fn parts(&self) -> Vec<Rc<dyn Part>> {
+        vec![
+            Rc::new(PageHeaderPart {
+                header: Rc::new(self.page.page_header.clone()),
+            }),
+            Rc::new(CellPointerPart::new(
+                self.page.cell_pointer.clone(),
+                self.page.cell_pointer_offset,
+                false,
             )),
         ]
     }

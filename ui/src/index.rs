@@ -116,28 +116,27 @@ pub fn SideBar() -> Element {
                 class: "font-bold truncate pb-4",
                 "B-tree Pages",
             }
-            ul {
+            div {
                 for (n, page) in pages.into_iter().enumerate() {
                     div {
-                        class: "flex",
+                        class: "flex w-full",
+                        div { class: "flex-grow" }
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
                             // page offset
                             "{&page.page_size() * n as u64}",
                         }
-                        li {
-                            button {
-                                class: "w-full h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
-                                class: if *selected_page.read().label() == *page.label() {"btn-active"},
-                                onclick: move |_| {
-                                    *selected_page.write() = page.clone();
-                                    *selected_part.write() = None;
-                                    *selected_field.write() = None;
-                                },
-                                "Page {n+1}",
-                                br {}
-                                "{&page.label()}",
-                            }
+                        button {
+                            class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
+                            class: if selected_page.read().id() == page.id() {"btn-active"},
+                            onclick: move |_| {
+                                *selected_page.write() = page.clone();
+                                *selected_part.write() = None;
+                                *selected_field.write() = None;
+                            },
+                            "Page {n+1}",
+                            br {}
+                            "{&page.label()}",
                         }
                     }
                 }

@@ -1752,6 +1752,18 @@ html {
   width: 100%;
 }
 
+.w-64 {
+  width: 16rem;
+}
+
+.w-48 {
+  width: 12rem;
+}
+
+.w-40 {
+  width: 10rem;
+}
+
 .max-w-sm {
   max-width: 24rem;
 }

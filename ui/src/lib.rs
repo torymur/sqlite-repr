@@ -14,6 +14,7 @@ use parser::header::TextEncoding;
 use parser::page::PageHeaderType;
 
 pub trait BtreePage: std::fmt::Debug {
+    fn id(&self) -> usize;
     fn label(&self) -> String;
     fn desc(&self) -> &'static str;
     fn parts(&self) -> Vec<Rc<dyn Part>>;
