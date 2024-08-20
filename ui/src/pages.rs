@@ -1,29 +1,31 @@
 use std::rc::Rc;
 
+use parser::cell::{CellPointer, CELL_PTR_SIZE};
 use parser::header::DBHeader;
-use parser::page::PageHeader;
+use parser::page::{Page, PageHeader};
+use parser::reader::DB_HEADER_SIZE;
 
 use crate::header::DBHeaderPart;
-use crate::{Field, Page, Part, Value};
+use crate::{BtreePage, Field, Part, Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RootPage {
     db_header: Rc<DBHeader>,
-    page_header: Rc<PageHeader>,
+    page: Rc<Page>,
 }
 
 impl RootPage {
-    pub fn new(db_header: DBHeader, page_header: PageHeader) -> Self {
+    pub fn new(db_header: DBHeader, page: Page) -> Self {
         Self {
             db_header: Rc::new(db_header),
-            page_header: Rc::new(page_header),
+            page: Rc::new(page),
         }
     }
 }
 
-impl Page for RootPage {
+impl BtreePage for RootPage {
     fn label(&self) -> String {
-        format!("Root {}", self.page_header.page_type)
+        format!("Root {}", self.page.page_header.page_type)
     }
 
     fn desc(&self) -> &'static str {
@@ -36,8 +38,13 @@ impl Page for RootPage {
                 header: self.db_header.clone(),
             }),
             Rc::new(PageHeaderPart {
-                header: self.page_header.clone(),
+                header: Rc::new(self.page.page_header.clone()),
             }),
+            Rc::new(CellPointerPart::new(
+                self.page.cell_pointer.clone(),
+                self.page.cell_pointer_offset,
+                true,
+            )),
         ]
     }
 
@@ -73,7 +80,7 @@ impl Part for PageHeaderPart {
                 Value::PageType(self.header.page_type)
             ),
             Field::new(
-                "Start of the first freeblock on the page or zero if there are no freeblocks.",
+                "Start of the first freeblock on the page or zero if there are no freeblocks. A freeblock is a structure used to identify unallocated space within a b-tree page. Freeblocks are organized as a chain. The first 2 bytes of a freeblock are a big-endian integer which is the offset in the b-tree page of the next freeblock in the chain, or zero if the freeblock is the last on the chain. The third and fourth bytes of each freeblock form a big-endian integer which is the size of the freeblock in bytes, including the 4-byte header. Freeblocks are always connected in order of increasing offset. The second field of the b-tree page header is the offset of the first freeblock, or zero if there are no freeblocks on the page. In a well-formed b-tree page, there will always be at least one cell before the first freeblock.A freeblock requires at least 4 bytes of space.",
                 101,
                 2,
                 {
@@ -84,19 +91,19 @@ impl Part for PageHeaderPart {
                 },
             ),
             Field::new(
-                "Number of cells on the page.",
+                "Number of cells on the page. A page might contain no cells, which is only possible for a root page of a table that contains no rows. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array.",
                 103,
                 2,
                 Value::U16(self.header.cell_num)
             ),
             Field::new(
-                "Start of the cell content area. A zero value for this integer is interpreted as 65536.",
+                "Start of the cell content area. A zero value for this integer is interpreted as 65536. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array. If a page contains no cells, then the offset to the cell content area will equal the page size minus the bytes of reserved space.",
                 105,
                 2,
                 Value::CellStartOffset(self.header.cell_start_offset)
             ),
             Field::new(
-                "The number of fragmented free bytes within the cell content area.",
+                "The number of fragmented free bytes within the cell content area. If there is an isolated group of 1, 2, or 3 unused bytes within the cell content area, those bytes comprise a fragment. The total number of bytes in all fragments is stored in the fifth field of the b-tree page header. In a well-formed b-tree page, the total number of bytes in fragments may not exceed 60. The total amount of free space on a b-tree page consists of the size of the unallocated region plus the total size of all freeblocks plus the number of fragmented free bytes. SQLite may from time to time reorganize a b-tree page so that there are no freeblocks or fragment bytes, all unused bytes are contained in the unallocated space region, and all cells are packed tightly at the end of the page. This is called 'defragmenting' the b-tree page.",
                 107,
                 1,
                 Value::U8(self.header.fragmented_free_bytes)
@@ -115,5 +122,52 @@ impl Part for PageHeaderPart {
                 fields
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CellPointerPart {
+    pub cell_ptrs: Rc<CellPointer>,
+    pub offset: usize,
+}
+
+impl CellPointerPart {
+    pub fn new(cell_ptrs: CellPointer, offset: usize, root: bool) -> Self {
+        Self {
+            cell_ptrs: Rc::new(cell_ptrs),
+            offset: if root {
+                offset + DB_HEADER_SIZE
+            } else {
+                offset
+            },
+        }
+    }
+}
+
+impl Part for CellPointerPart {
+    fn label(&self) -> &'static str {
+        "Cell pointer array"
+    }
+
+    fn desc(&self) -> &'static str {
+        "The cell pointer array of a b-tree page immediately follows the b-tree page header. Let K be the number of cells on the btree. The cell pointer array consists of K 2-byte integer offsets to the cell contents. The cell pointers are arranged in key order with left-most cell (the cell with the smallest key) first and the right-most cell (the cell with the largest key) last."
+    }
+
+    fn color(&self) -> &'static str {
+        "orange"
+    }
+
+    fn fields(&self) -> Vec<Field> {
+        let mut offset = self.offset;
+        self.cell_ptrs.array.iter().map(|ptr| {
+            let field = Field::new(
+                "2-byte integer offsets to the cell contents. Cell content is stored in the cell content region of the b-tree page. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array. If a page contains no cells (which is only possible for a root page of a table that contains no rows) then the offset to the cell content area will equal the page size minus the bytes of reserved space. If the database uses a 65536-byte page size and the reserved space is zero (the usual value for reserved space) then the cell content offset of an empty page wants to be 65536. However, that integer is too large to be stored in a 2-byte unsigned integer, so a value of 0 is used in its place.",
+                offset,
+                CELL_PTR_SIZE,
+                Value::CellStartOffset(*ptr)
+            );
+            offset += CELL_PTR_SIZE;
+            field
+        }).collect::<Vec<Field>>()
     }
 }

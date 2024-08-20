@@ -21,14 +21,9 @@ impl TryFrom<&[u8]> for CellPointer {
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let mut array = vec![];
         for n in 0..buf.len() / CELL_PTR_SIZE {
-            let offset = slc!(
-                buf,
-                n * CELL_PTR_SIZE,
-                n * CELL_PTR_SIZE + CELL_PTR_SIZE,
-                u16
-            )
-            .checked_sub(1)
-            .map_or(65536, |x| (x + 1) as u32);
+            let offset = slc!(buf, n * CELL_PTR_SIZE, CELL_PTR_SIZE, u16)
+                .checked_sub(1)
+                .map_or(65536, |x| (x + 1) as u32);
             array.push(offset)
         }
         Ok(CellPointer::new(array))

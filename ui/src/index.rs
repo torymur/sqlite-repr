@@ -175,6 +175,7 @@ pub fn Description() -> Element {
                         "{part_label}"
                     }
                     div {
+                        class: "text-xs",
                         "{part_desc}"
                     }
                     div {
@@ -184,9 +185,9 @@ pub fn Description() -> Element {
                             "{field.desc}"
                         }
                         div {
-                            class: "overflow-auto w-1/3",
+                            class: "w-1/3",
                             table {
-                                class: "table table-xs",
+                                class: "table table-xs table-fixed",
                                 tbody {
                                     tr {
                                         td {
@@ -209,7 +210,10 @@ pub fn Description() -> Element {
                                             "Value"
                                         }
                                         td {
-                                            "{field.value}"
+                                            div {
+                                                class: "truncate",
+                                                "{field.value}"
+                                            }
                                         }
                                     }
                                     tr {
@@ -217,7 +221,10 @@ pub fn Description() -> Element {
                                             "Hex"
                                         }
                                         td {
-                                            "{field.to_hex()}"
+                                            div {
+                                                class: "truncate",
+                                                "{field.to_hex()}"
+                                            }
                                         }
                                     }
                                 }

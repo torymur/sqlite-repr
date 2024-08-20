@@ -4,7 +4,7 @@ module.exports = {
   content: ["./src/**/*.{rs,html,css}", "./dist/**/*.html"],
   safelist: [
     {
-        pattern: /(bg|text|border)-(orange|green)-(700|800)/,
+        pattern: /(bg|text|border)-(orange|green|fuchsia)-(700|800)/,
     },
   ],
   daisyui: {

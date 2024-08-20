@@ -13,7 +13,7 @@ use std::rc::Rc;
 use parser::header::TextEncoding;
 use parser::page::PageHeaderType;
 
-pub trait Page: std::fmt::Debug {
+pub trait BtreePage: std::fmt::Debug {
     fn label(&self) -> String;
     fn desc(&self) -> &'static str;
     fn parts(&self) -> Vec<Rc<dyn Part>>;

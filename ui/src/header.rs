@@ -50,7 +50,7 @@ impl Part for DBHeaderPart {
                 Value::U8(self.header.read_version),
             ),
             Field::new(
-                "Number of bytes to define unused (reserved) space at the end of each page, usually 0, could be odd. These bytes are used by extensions, for example, by the SQLite Encryption Extension to store a nonce and/or cryptographic checksum associated with each page. The 'usable size' of a database page is: Page size - Reserved space. It could be an odd number, but it's not allowed to be less than 480, which means that in this case reserved space size won't exceed 32.",
+                "Number of bytes to define unused (reserved) space at the end of each page, usually 0. These bytes are used by extensions, for example, by the SQLite Encryption Extension to store a nonce and/or cryptographic checksum associated with each page. The 'usable size' of a database page is: Page size - Reserved space. It could be an odd number, but it's not allowed to be less than 480, which means that in this case reserved space size won't exceed 32.",
                 20,
                 1,
                 Value::U8(self.header.reserved_page_space),

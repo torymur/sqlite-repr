@@ -1,6 +1,6 @@
 use crate::{DBHeader, Page};
 
-const DB_HEADER_SIZE: usize = 100;
+pub const DB_HEADER_SIZE: usize = 100;
 
 #[derive(Debug)]
 pub struct Reader {
