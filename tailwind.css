@@ -1706,6 +1706,10 @@ html {
   display: table;
 }
 
+.contents {
+  display: contents;
+}
+
 .h-12 {
   height: 3rem;
 }
@@ -1727,6 +1731,10 @@ html {
   height: fit-content;
 }
 
+.h-96 {
+  height: 24rem;
+}
+
 .w-1\/3 {
   width: 33.333333%;
 }
@@ -1744,8 +1752,32 @@ html {
   width: 100%;
 }
 
+.w-64 {
+  width: 16rem;
+}
+
+.w-48 {
+  width: 12rem;
+}
+
+.w-40 {
+  width: 10rem;
+}
+
+.max-w-sm {
+  max-width: 24rem;
+}
+
+.max-w-lg {
+  max-width: 32rem;
+}
+
 .flex-grow {
   flex-grow: 1;
+}
+
+.table-fixed {
+  table-layout: fixed;
 }
 
 .flex-col {
@@ -1781,9 +1813,21 @@ html {
   overflow: auto;
 }
 
+.overflow-hidden {
+  overflow: hidden;
+}
+
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis {
+  text-overflow: ellipsis;
+}
+
+.whitespace-nowrap {
   white-space: nowrap;
 }
 
@@ -1802,6 +1846,184 @@ html {
 .border-cyan-950 {
   --tw-border-opacity: 1;
   border-color: rgb(8 51 68 / var(--tw-border-opacity));
+}
+
+.border-fuchsia-700 {
+  --tw-border-opacity: 1;
+  border-color: rgb(162 28 175 / var(--tw-border-opacity));
+}
+
+.border-fuchsia-700\/0 {
+  border-color: rgb(162 28 175 / 0);
+}
+
+.border-fuchsia-700\/10 {
+  border-color: rgb(162 28 175 / 0.1);
+}
+
+.border-fuchsia-700\/100 {
+  border-color: rgb(162 28 175 / 1);
+}
+
+.border-fuchsia-700\/15 {
+  border-color: rgb(162 28 175 / 0.15);
+}
+
+.border-fuchsia-700\/20 {
+  border-color: rgb(162 28 175 / 0.2);
+}
+
+.border-fuchsia-700\/25 {
+  border-color: rgb(162 28 175 / 0.25);
+}
+
+.border-fuchsia-700\/30 {
+  border-color: rgb(162 28 175 / 0.3);
+}
+
+.border-fuchsia-700\/35 {
+  border-color: rgb(162 28 175 / 0.35);
+}
+
+.border-fuchsia-700\/40 {
+  border-color: rgb(162 28 175 / 0.4);
+}
+
+.border-fuchsia-700\/45 {
+  border-color: rgb(162 28 175 / 0.45);
+}
+
+.border-fuchsia-700\/5 {
+  border-color: rgb(162 28 175 / 0.05);
+}
+
+.border-fuchsia-700\/50 {
+  border-color: rgb(162 28 175 / 0.5);
+}
+
+.border-fuchsia-700\/55 {
+  border-color: rgb(162 28 175 / 0.55);
+}
+
+.border-fuchsia-700\/60 {
+  border-color: rgb(162 28 175 / 0.6);
+}
+
+.border-fuchsia-700\/65 {
+  border-color: rgb(162 28 175 / 0.65);
+}
+
+.border-fuchsia-700\/70 {
+  border-color: rgb(162 28 175 / 0.7);
+}
+
+.border-fuchsia-700\/75 {
+  border-color: rgb(162 28 175 / 0.75);
+}
+
+.border-fuchsia-700\/80 {
+  border-color: rgb(162 28 175 / 0.8);
+}
+
+.border-fuchsia-700\/85 {
+  border-color: rgb(162 28 175 / 0.85);
+}
+
+.border-fuchsia-700\/90 {
+  border-color: rgb(162 28 175 / 0.9);
+}
+
+.border-fuchsia-700\/95 {
+  border-color: rgb(162 28 175 / 0.95);
+}
+
+.border-fuchsia-800 {
+  --tw-border-opacity: 1;
+  border-color: rgb(134 25 143 / var(--tw-border-opacity));
+}
+
+.border-fuchsia-800\/0 {
+  border-color: rgb(134 25 143 / 0);
+}
+
+.border-fuchsia-800\/10 {
+  border-color: rgb(134 25 143 / 0.1);
+}
+
+.border-fuchsia-800\/100 {
+  border-color: rgb(134 25 143 / 1);
+}
+
+.border-fuchsia-800\/15 {
+  border-color: rgb(134 25 143 / 0.15);
+}
+
+.border-fuchsia-800\/20 {
+  border-color: rgb(134 25 143 / 0.2);
+}
+
+.border-fuchsia-800\/25 {
+  border-color: rgb(134 25 143 / 0.25);
+}
+
+.border-fuchsia-800\/30 {
+  border-color: rgb(134 25 143 / 0.3);
+}
+
+.border-fuchsia-800\/35 {
+  border-color: rgb(134 25 143 / 0.35);
+}
+
+.border-fuchsia-800\/40 {
+  border-color: rgb(134 25 143 / 0.4);
+}
+
+.border-fuchsia-800\/45 {
+  border-color: rgb(134 25 143 / 0.45);
+}
+
+.border-fuchsia-800\/5 {
+  border-color: rgb(134 25 143 / 0.05);
+}
+
+.border-fuchsia-800\/50 {
+  border-color: rgb(134 25 143 / 0.5);
+}
+
+.border-fuchsia-800\/55 {
+  border-color: rgb(134 25 143 / 0.55);
+}
+
+.border-fuchsia-800\/60 {
+  border-color: rgb(134 25 143 / 0.6);
+}
+
+.border-fuchsia-800\/65 {
+  border-color: rgb(134 25 143 / 0.65);
+}
+
+.border-fuchsia-800\/70 {
+  border-color: rgb(134 25 143 / 0.7);
+}
+
+.border-fuchsia-800\/75 {
+  border-color: rgb(134 25 143 / 0.75);
+}
+
+.border-fuchsia-800\/80 {
+  border-color: rgb(134 25 143 / 0.8);
+}
+
+.border-fuchsia-800\/85 {
+  border-color: rgb(134 25 143 / 0.85);
+}
+
+.border-fuchsia-800\/90 {
+  border-color: rgb(134 25 143 / 0.9);
+}
+
+.border-fuchsia-800\/95 {
+  border-color: rgb(134 25 143 / 0.95);
 }
 
 .border-green-700 {
@@ -2158,6 +2380,184 @@ html {
 
 .border-orange-800\/95 {
   border-color: rgb(154 52 18 / 0.95);
+}
+
+.bg-fuchsia-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(162 28 175 / var(--tw-bg-opacity));
+}
+
+.bg-fuchsia-700\/0 {
+  background-color: rgb(162 28 175 / 0);
+}
+
+.bg-fuchsia-700\/10 {
+  background-color: rgb(162 28 175 / 0.1);
+}
+
+.bg-fuchsia-700\/100 {
+  background-color: rgb(162 28 175 / 1);
+}
+
+.bg-fuchsia-700\/15 {
+  background-color: rgb(162 28 175 / 0.15);
+}
+
+.bg-fuchsia-700\/20 {
+  background-color: rgb(162 28 175 / 0.2);
+}
+
+.bg-fuchsia-700\/25 {
+  background-color: rgb(162 28 175 / 0.25);
+}
+
+.bg-fuchsia-700\/30 {
+  background-color: rgb(162 28 175 / 0.3);
+}
+
+.bg-fuchsia-700\/35 {
+  background-color: rgb(162 28 175 / 0.35);
+}
+
+.bg-fuchsia-700\/40 {
+  background-color: rgb(162 28 175 / 0.4);
+}
+
+.bg-fuchsia-700\/45 {
+  background-color: rgb(162 28 175 / 0.45);
+}
+
+.bg-fuchsia-700\/5 {
+  background-color: rgb(162 28 175 / 0.05);
+}
+
+.bg-fuchsia-700\/50 {
+  background-color: rgb(162 28 175 / 0.5);
+}
+
+.bg-fuchsia-700\/55 {
+  background-color: rgb(162 28 175 / 0.55);
+}
+
+.bg-fuchsia-700\/60 {
+  background-color: rgb(162 28 175 / 0.6);
+}
+
+.bg-fuchsia-700\/65 {
+  background-color: rgb(162 28 175 / 0.65);
+}
+
+.bg-fuchsia-700\/70 {
+  background-color: rgb(162 28 175 / 0.7);
+}
+
+.bg-fuchsia-700\/75 {
+  background-color: rgb(162 28 175 / 0.75);
+}
+
+.bg-fuchsia-700\/80 {
+  background-color: rgb(162 28 175 / 0.8);
+}
+
+.bg-fuchsia-700\/85 {
+  background-color: rgb(162 28 175 / 0.85);
+}
+
+.bg-fuchsia-700\/90 {
+  background-color: rgb(162 28 175 / 0.9);
+}
+
+.bg-fuchsia-700\/95 {
+  background-color: rgb(162 28 175 / 0.95);
+}
+
+.bg-fuchsia-800 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(134 25 143 / var(--tw-bg-opacity));
+}
+
+.bg-fuchsia-800\/0 {
+  background-color: rgb(134 25 143 / 0);
+}
+
+.bg-fuchsia-800\/10 {
+  background-color: rgb(134 25 143 / 0.1);
+}
+
+.bg-fuchsia-800\/100 {
+  background-color: rgb(134 25 143 / 1);
+}
+
+.bg-fuchsia-800\/15 {
+  background-color: rgb(134 25 143 / 0.15);
+}
+
+.bg-fuchsia-800\/20 {
+  background-color: rgb(134 25 143 / 0.2);
+}
+
+.bg-fuchsia-800\/25 {
+  background-color: rgb(134 25 143 / 0.25);
+}
+
+.bg-fuchsia-800\/30 {
+  background-color: rgb(134 25 143 / 0.3);
+}
+
+.bg-fuchsia-800\/35 {
+  background-color: rgb(134 25 143 / 0.35);
+}
+
+.bg-fuchsia-800\/40 {
+  background-color: rgb(134 25 143 / 0.4);
+}
+
+.bg-fuchsia-800\/45 {
+  background-color: rgb(134 25 143 / 0.45);
+}
+
+.bg-fuchsia-800\/5 {
+  background-color: rgb(134 25 143 / 0.05);
+}
+
+.bg-fuchsia-800\/50 {
+  background-color: rgb(134 25 143 / 0.5);
+}
+
+.bg-fuchsia-800\/55 {
+  background-color: rgb(134 25 143 / 0.55);
+}
+
+.bg-fuchsia-800\/60 {
+  background-color: rgb(134 25 143 / 0.6);
+}
+
+.bg-fuchsia-800\/65 {
+  background-color: rgb(134 25 143 / 0.65);
+}
+
+.bg-fuchsia-800\/70 {
+  background-color: rgb(134 25 143 / 0.7);
+}
+
+.bg-fuchsia-800\/75 {
+  background-color: rgb(134 25 143 / 0.75);
+}
+
+.bg-fuchsia-800\/80 {
+  background-color: rgb(134 25 143 / 0.8);
+}
+
+.bg-fuchsia-800\/85 {
+  background-color: rgb(134 25 143 / 0.85);
+}
+
+.bg-fuchsia-800\/90 {
+  background-color: rgb(134 25 143 / 0.9);
+}
+
+.bg-fuchsia-800\/95 {
+  background-color: rgb(134 25 143 / 0.95);
 }
 
 .bg-green-700 {
@@ -2591,10 +2991,6 @@ html {
   font-weight: 500;
 }
 
-.font-normal {
-  font-weight: 400;
-}
-
 .leading-tight {
   line-height: 1.25;
 }
@@ -2606,6 +3002,184 @@ html {
 .text-cyan-950 {
   --tw-text-opacity: 1;
   color: rgb(8 51 68 / var(--tw-text-opacity));
+}
+
+.text-fuchsia-700 {
+  --tw-text-opacity: 1;
+  color: rgb(162 28 175 / var(--tw-text-opacity));
+}
+
+.text-fuchsia-700\/0 {
+  color: rgb(162 28 175 / 0);
+}
+
+.text-fuchsia-700\/10 {
+  color: rgb(162 28 175 / 0.1);
+}
+
+.text-fuchsia-700\/100 {
+  color: rgb(162 28 175 / 1);
+}
+
+.text-fuchsia-700\/15 {
+  color: rgb(162 28 175 / 0.15);
+}
+
+.text-fuchsia-700\/20 {
+  color: rgb(162 28 175 / 0.2);
+}
+
+.text-fuchsia-700\/25 {
+  color: rgb(162 28 175 / 0.25);
+}
+
+.text-fuchsia-700\/30 {
+  color: rgb(162 28 175 / 0.3);
+}
+
+.text-fuchsia-700\/35 {
+  color: rgb(162 28 175 / 0.35);
+}
+
+.text-fuchsia-700\/40 {
+  color: rgb(162 28 175 / 0.4);
+}
+
+.text-fuchsia-700\/45 {
+  color: rgb(162 28 175 / 0.45);
+}
+
+.text-fuchsia-700\/5 {
+  color: rgb(162 28 175 / 0.05);
+}
+
+.text-fuchsia-700\/50 {
+  color: rgb(162 28 175 / 0.5);
+}
+
+.text-fuchsia-700\/55 {
+  color: rgb(162 28 175 / 0.55);
+}
+
+.text-fuchsia-700\/60 {
+  color: rgb(162 28 175 / 0.6);
+}
+
+.text-fuchsia-700\/65 {
+  color: rgb(162 28 175 / 0.65);
+}
+
+.text-fuchsia-700\/70 {
+  color: rgb(162 28 175 / 0.7);
+}
+
+.text-fuchsia-700\/75 {
+  color: rgb(162 28 175 / 0.75);
+}
+
+.text-fuchsia-700\/80 {
+  color: rgb(162 28 175 / 0.8);
+}
+
+.text-fuchsia-700\/85 {
+  color: rgb(162 28 175 / 0.85);
+}
+
+.text-fuchsia-700\/90 {
+  color: rgb(162 28 175 / 0.9);
+}
+
+.text-fuchsia-700\/95 {
+  color: rgb(162 28 175 / 0.95);
+}
+
+.text-fuchsia-800 {
+  --tw-text-opacity: 1;
+  color: rgb(134 25 143 / var(--tw-text-opacity));
+}
+
+.text-fuchsia-800\/0 {
+  color: rgb(134 25 143 / 0);
+}
+
+.text-fuchsia-800\/10 {
+  color: rgb(134 25 143 / 0.1);
+}
+
+.text-fuchsia-800\/100 {
+  color: rgb(134 25 143 / 1);
+}
+
+.text-fuchsia-800\/15 {
+  color: rgb(134 25 143 / 0.15);
+}
+
+.text-fuchsia-800\/20 {
+  color: rgb(134 25 143 / 0.2);
+}
+
+.text-fuchsia-800\/25 {
+  color: rgb(134 25 143 / 0.25);
+}
+
+.text-fuchsia-800\/30 {
+  color: rgb(134 25 143 / 0.3);
+}
+
+.text-fuchsia-800\/35 {
+  color: rgb(134 25 143 / 0.35);
+}
+
+.text-fuchsia-800\/40 {
+  color: rgb(134 25 143 / 0.4);
+}
+
+.text-fuchsia-800\/45 {
+  color: rgb(134 25 143 / 0.45);
+}
+
+.text-fuchsia-800\/5 {
+  color: rgb(134 25 143 / 0.05);
+}
+
+.text-fuchsia-800\/50 {
+  color: rgb(134 25 143 / 0.5);
+}
+
+.text-fuchsia-800\/55 {
+  color: rgb(134 25 143 / 0.55);
+}
+
+.text-fuchsia-800\/60 {
+  color: rgb(134 25 143 / 0.6);
+}
+
+.text-fuchsia-800\/65 {
+  color: rgb(134 25 143 / 0.65);
+}
+
+.text-fuchsia-800\/70 {
+  color: rgb(134 25 143 / 0.7);
+}
+
+.text-fuchsia-800\/75 {
+  color: rgb(134 25 143 / 0.75);
+}
+
+.text-fuchsia-800\/80 {
+  color: rgb(134 25 143 / 0.8);
+}
+
+.text-fuchsia-800\/85 {
+  color: rgb(134 25 143 / 0.85);
+}
+
+.text-fuchsia-800\/90 {
+  color: rgb(134 25 143 / 0.9);
+}
+
+.text-fuchsia-800\/95 {
+  color: rgb(134 25 143 / 0.95);
 }
 
 .text-green-700 {
