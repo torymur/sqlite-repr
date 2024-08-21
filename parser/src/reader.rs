@@ -1,11 +1,12 @@
 use crate::{DBHeader, Page};
+use std::rc::Rc;
 
 pub const DB_HEADER_SIZE: usize = 100;
 
 #[derive(Debug)]
 pub struct Reader {
     pub bytes: &'static [u8],
-    pub db_header: DBHeader,
+    pub db_header: Rc<DBHeader>,
 }
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -23,7 +24,7 @@ impl Reader {
 
         let mut bheader = [0; DB_HEADER_SIZE];
         bheader.clone_from_slice(&bytes[..DB_HEADER_SIZE]);
-        let db_header = DBHeader::try_from(&bheader)?;
+        let db_header = Rc::new(DBHeader::try_from(&bheader)?);
 
         Ok(Self { bytes, db_header })
     }
@@ -36,7 +37,13 @@ impl Reader {
         let page_size = self.db_header.page_size as usize;
         let mut b_page = vec![0; page_size];
         b_page.clone_from_slice(&self.bytes[page_offset..page_offset + page_size]);
-        let page = Page::try_from(&b_page)?;
+
+        let db_header = if page_num == 1 {
+            Some(self.db_header.clone())
+        } else {
+            None
+        };
+        let page = Page::try_from((db_header, b_page.as_slice()))?;
         Ok(page)
     }
 

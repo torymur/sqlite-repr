@@ -1,5 +1,8 @@
 //! BTree Page exploration
+use crate::reader::DB_HEADER_SIZE;
+use crate::DBHeader;
 use crate::{slc, CellPointer, CELL_PTR_SIZE};
+use std::rc::Rc;
 
 const PAGE_HEADER_SIZE: usize = 12;
 const PAGE_RIGHT_PTR_SIZE: usize = 4;
@@ -120,32 +123,66 @@ impl TryFrom<&[u8]> for PageHeader {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Unallocated {
+    pub array: Vec<u8>,
+}
+
+impl Unallocated {
+    pub fn new(array: Vec<u8>) -> Self {
+        Self { array }
+    }
+}
+
+impl TryFrom<&[u8]> for Unallocated {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        let array = buf
+            .iter()
+            .map(|b| u8::from_be_bytes([*b; 1]))
+            .collect::<Vec<u8>>();
+        Ok(Unallocated::new(array))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Page {
+    pub db_header: Option<Rc<DBHeader>>,
     pub page_header: PageHeader,
     pub cell_pointer: CellPointer,
     pub cell_pointer_offset: usize,
+    pub unallocated: Unallocated,
+    pub unallocated_offset: usize,
 }
 
 impl Page {
     pub fn new(
+        db_header: Option<Rc<DBHeader>>,
         page_header: PageHeader,
         cell_pointer: CellPointer,
         cell_pointer_offset: usize,
+        unallocated: Unallocated,
+        unallocated_offset: usize,
     ) -> Self {
         Self {
+            db_header,
             page_header,
             cell_pointer,
             cell_pointer_offset,
+            unallocated,
+            unallocated_offset,
         }
     }
 }
 
-impl TryFrom<&Vec<u8>> for Page {
+impl TryFrom<(Option<Rc<DBHeader>>, &[u8])> for Page {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(buf: &Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(value: (Option<Rc<DBHeader>>, &[u8])) -> Result<Self, Self::Error> {
+        let (db_header, buf) = value;
         let page_header = PageHeader::try_from(&buf[0..PAGE_HEADER_SIZE])?;
 
+        // Create cell pointer array.
         // For leaf pages page header is actually 8, not 12 bytes
         let ptr_offset = if page_header.page_type.is_interior() {
             PAGE_HEADER_SIZE
@@ -153,8 +190,24 @@ impl TryFrom<&Vec<u8>> for Page {
             PAGE_HEADER_SIZE - PAGE_RIGHT_PTR_SIZE
         };
         let ptrs_size = page_header.cell_num as usize * CELL_PTR_SIZE;
-        let cell_pointer = CellPointer::try_from(&buf[ptr_offset..ptr_offset + ptrs_size])?;
+        let unallocated_offset = ptr_offset + ptrs_size;
+        let cell_pointer = CellPointer::try_from(&buf[ptr_offset..unallocated_offset])?;
 
-        Ok(Page::new(page_header, cell_pointer, ptr_offset))
+        // Make an unallocated space.
+        let unallocated_size = match db_header {
+            None => page_header.cell_start_offset as usize - unallocated_offset,
+            Some(_) => page_header.cell_start_offset as usize - unallocated_offset - DB_HEADER_SIZE,
+        };
+        let unallocated =
+            Unallocated::try_from(&buf[unallocated_offset..unallocated_offset + unallocated_size])?;
+
+        Ok(Page::new(
+            db_header,
+            page_header,
+            cell_pointer,
+            ptr_offset,
+            unallocated,
+            unallocated_offset,
+        ))
     }
 }
