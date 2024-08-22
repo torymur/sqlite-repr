@@ -4,14 +4,15 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
+use crate::pages::PageView;
 use crate::viewer::{Viewer, SIMPLE_DB};
-use crate::{BtreePage, Field, Part};
+use crate::{Field, Part};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub current_db: Signal<String>,
     pub viewer: Signal<Viewer>,
-    pub selected_page: Signal<Rc<dyn BtreePage>>,
+    pub selected_page: Signal<Rc<PageView>>,
     pub selected_field: Signal<Option<Field>>,
     pub selected_part: Signal<Option<Rc<dyn Part>>>,
     pub format: Signal<Format>,

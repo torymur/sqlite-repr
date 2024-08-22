@@ -2,69 +2,20 @@ use std::rc::Rc;
 
 use parser::cell::{CellPointer, CELL_PTR_SIZE};
 use parser::header::DBHeader;
-use parser::page::{Page, PageHeader};
+use parser::page::{Page, PageHeader, Unallocated};
 use parser::reader::DB_HEADER_SIZE;
 
 use crate::header::DBHeaderPart;
-use crate::{BtreePage, Field, Part, Value};
+use crate::{Field, Part, Value};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RootPage {
-    id: usize,
-    db_header: Rc<DBHeader>,
-    page: Rc<Page>,
+pub struct PageView {
+    pub id: usize,
+    pub db_header: Rc<DBHeader>,
+    pub page: Rc<Page>,
 }
 
-impl RootPage {
-    pub fn new(db_header: Rc<DBHeader>, page: Page) -> Self {
-        Self {
-            db_header: db_header.clone(),
-            page: Rc::new(page),
-            id: 1,
-        }
-    }
-}
-
-impl BtreePage for RootPage {
-    fn id(&self) -> usize {
-        self.id
-    }
-
-    fn label(&self) -> String {
-        format!("Root {}", self.page.page_header.page_type)
-    }
-
-    fn desc(&self) -> &'static str {
-        "The 100-byte database file header is found only on Page 1, meaning that root page has 100 fewer bytes of storage space available. It's always a table b-tree page: interior or leaf. Page 1 is the root page of a table b-tree, that holds a special table named 'sqlite_schema'. This b-tree is known as the 'schema table' since it stores the complete database schema."
-    }
-
-    fn parts(&self) -> Vec<Rc<dyn Part>> {
-        vec![
-            Rc::new(DBHeaderPart {
-                header: self.db_header.clone(),
-            }),
-            Rc::new(PageHeaderPart::new(self.page.page_header.clone(), true)),
-            Rc::new(CellPointerPart::new(
-                self.page.cell_pointer.clone(),
-                self.page.cell_pointer_offset,
-                true,
-            )),
-        ]
-    }
-
-    fn page_size(&self) -> u64 {
-        self.db_header.page_size
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AnyPage {
-    id: usize,
-    db_header: Rc<DBHeader>,
-    page: Rc<Page>,
-}
-
-impl AnyPage {
+impl PageView {
     pub fn new(db_header: Rc<DBHeader>, page: Page, id: usize) -> Self {
         Self {
             db_header: db_header.clone(),
@@ -72,34 +23,39 @@ impl AnyPage {
             id,
         }
     }
-}
 
-impl BtreePage for AnyPage {
-    fn id(&self) -> usize {
-        self.id
+    pub fn label(&self) -> String {
+        if self.id == 1 {
+            format!("Root {}", self.page.page_header.page_type)
+        } else {
+            format!("{}", self.page.page_header.page_type)
+        }
     }
 
-    fn label(&self) -> String {
-        format!("{}", self.page.page_header.page_type)
+    pub fn desc(&self) -> &'static str {
+        if self.id == 1 {
+            "The 100-byte database file header is found only on Page 1, meaning that root page has 100 fewer bytes of storage space available. It's always a table b-tree page: interior or leaf. Page 1 is the root page of a table b-tree, that holds a special table named 'sqlite_schema'. This b-tree is known as the 'schema table' since it stores the complete database schema."
+        } else {
+            "A b-tree page is either an interior page or a leaf page. A b-tree page is either a table b-tree page or an index b-tree page. All pages within each complete b-tree are of the same type: either table or index. A leaf page contains keys and in the case of a table b-tree each key has associated data. An interior page contains K keys together with K+1 pointers to child b-tree pages. A'pointer' in an interior b-tree page is just the 32-bit unsigned integer page number of the child page."
+        }
     }
 
-    fn desc(&self) -> &'static str {
-        "A b-tree page is either an interior page or a leaf page. A b-tree page is either a table b-tree page or an index b-tree page. All pages within each complete b-tree are of the same type: either table or index. A leaf page contains keys and in the case of a table b-tree each key has associated data. An interior page contains K keys together with K+1 pointers to child b-tree pages. A'pointer' in an interior b-tree page is just the 32-bit unsigned integer page number of the child page."
-    }
+    pub fn parts(&self) -> Vec<Rc<dyn Part>> {
+        let mut parts: Vec<Rc<dyn Part>> = vec![
+            Rc::new(PageHeaderPart::new(self.page.clone())),
+            Rc::new(CellPointerPart::new(self.page.clone())),
+            Rc::new(UnallocatedPart::new(self.page.clone())),
+        ];
 
-    fn parts(&self) -> Vec<Rc<dyn Part>> {
-        vec![
-            Rc::new(PageHeaderPart::new(self.page.page_header.clone(), false)),
-            Rc::new(CellPointerPart::new(
-                self.page.cell_pointer.clone(),
-                self.page.cell_pointer_offset,
-                false,
-            )),
-        ]
-    }
-
-    fn page_size(&self) -> u64 {
-        self.db_header.page_size
+        if self.id == 1 {
+            parts.insert(
+                0,
+                Rc::new(DBHeaderPart {
+                    header: self.db_header.clone(),
+                }),
+            )
+        };
+        parts
     }
 }
 
@@ -110,11 +66,14 @@ pub struct PageHeaderPart {
 }
 
 impl PageHeaderPart {
-    pub fn new(header: PageHeader, root: bool) -> Self {
-        Self {
-            header: Rc::new(header),
-            offset: if root { DB_HEADER_SIZE } else { 0 },
-        }
+    pub fn new(page: Rc<Page>) -> Self {
+        let header = Rc::new(page.page_header.clone());
+        let offset = if page.db_header.is_some() {
+            DB_HEADER_SIZE
+        } else {
+            0
+        };
+        Self { header, offset }
     }
 }
 
@@ -192,15 +151,14 @@ pub struct CellPointerPart {
 }
 
 impl CellPointerPart {
-    pub fn new(cell_ptrs: CellPointer, offset: usize, root: bool) -> Self {
-        Self {
-            cell_ptrs: Rc::new(cell_ptrs),
-            offset: if root {
-                offset + DB_HEADER_SIZE
-            } else {
-                offset
-            },
-        }
+    pub fn new(page: Rc<Page>) -> Self {
+        let cell_ptrs = Rc::new(page.cell_pointer.clone());
+        let offset = if page.db_header.is_some() {
+            page.cell_pointer_offset + DB_HEADER_SIZE
+        } else {
+            page.cell_pointer_offset
+        };
+        Self { cell_ptrs, offset }
     }
 }
 
@@ -229,5 +187,50 @@ impl Part for CellPointerPart {
             offset += CELL_PTR_SIZE;
             field
         }).collect::<Vec<Field>>()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnallocatedPart {
+    pub unallocated: Rc<Unallocated>,
+    pub offset: usize,
+}
+
+impl UnallocatedPart {
+    pub fn new(page: Rc<Page>) -> Self {
+        let unallocated = Rc::new(page.unallocated.clone());
+        let offset = if page.db_header.is_some() {
+            page.unallocated_offset + DB_HEADER_SIZE
+        } else {
+            page.unallocated_offset
+        };
+        Self {
+            unallocated,
+            offset,
+        }
+    }
+}
+
+impl Part for UnallocatedPart {
+    fn label(&self) -> &'static str {
+        "Unallocated space"
+    }
+
+    fn desc(&self) -> &'static str {
+        "The area in between the last cell pointer array entry and the beginning of the first cell is the unallocated region. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array."
+    }
+
+    fn color(&self) -> &'static str {
+        "green"
+    }
+
+    fn fields(&self) -> Vec<Field> {
+        vec![Field::new(
+            "The total amount of free space on a b-tree page consists of the size of the unallocated region plus the total size of all freeblocks plus the number of fragmented free bytes. SQLite may from time to time reorganize a b-tree page so that there are no freeblocks or fragment bytes, all unused bytes are contained in the unallocated space region, and all cells are packed tightly at the end of the page. This is called 'defragmenting' the b-tree page.",
+            self.offset,
+            self.unallocated.array.len(),
+            Value::Unallocated((&*self.unallocated.array).into()),
+            //Value::Unallocated(Box::new(&*self.unallocated.array.into())),
+        )]
     }
 }

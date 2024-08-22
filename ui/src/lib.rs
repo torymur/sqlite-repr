@@ -13,14 +13,6 @@ use std::rc::Rc;
 use parser::header::TextEncoding;
 use parser::page::PageHeaderType;
 
-pub trait BtreePage: std::fmt::Debug {
-    fn id(&self) -> usize;
-    fn label(&self) -> String;
-    fn desc(&self) -> &'static str;
-    fn parts(&self) -> Vec<Rc<dyn Part>>;
-    fn page_size(&self) -> u64;
-}
-
 pub trait Part: std::fmt::Debug {
     fn label(&self) -> &'static str;
     fn desc(&self) -> &'static str;
@@ -38,32 +30,48 @@ pub struct Field {
 
 impl Field {
     pub fn to_hex(&self) -> String {
-        let pretty_hex = |bytes: &[u8]| -> String {
-            bytes
-                .iter()
-                .map(|b| format!("{:02X}", b))
-                .collect::<Vec<String>>()
-                .join(" ")
-        };
         match &self.value {
-            Value::U8(v) => pretty_hex(&v.to_be_bytes()),
-            Value::U16(v) => pretty_hex(&v.to_be_bytes()),
-            Value::U32(v) => pretty_hex(&v.to_be_bytes()),
-            Value::Text(v) => pretty_hex(v.as_bytes()),
-            Value::Bool(v) => pretty_hex(&v.to_be_bytes()),
+            Value::U8(v) => Self::pretty_hex(&v.to_be_bytes()),
+            Value::U16(v) => Self::pretty_hex(&v.to_be_bytes()),
+            Value::U32(v) => Self::pretty_hex(&v.to_be_bytes()),
+            Value::Text(v) => Self::pretty_hex(v.as_bytes()),
+            Value::Bool(v) => Self::pretty_hex(&v.to_be_bytes()),
             Value::PageSize(v) => match v {
-                65536 => pretty_hex(&1_u16.to_be_bytes()),
-                _ => pretty_hex(&(*v as u16).to_be_bytes()),
+                65536 => Self::pretty_hex(&1_u16.to_be_bytes()),
+                _ => Self::pretty_hex(&(*v as u16).to_be_bytes()),
             },
-            Value::Array(v) => pretty_hex(v),
-            Value::Encoding(v) => pretty_hex(&v.to_be_bytes()),
-            Value::Version(v) => pretty_hex(&v.to_be_bytes()),
-            Value::PageType(v) => pretty_hex(&v.to_be_bytes()),
+            Value::Array(v) => Self::pretty_hex(v),
+            Value::Encoding(v) => Self::pretty_hex(&v.to_be_bytes()),
+            Value::Version(v) => Self::pretty_hex(&v.to_be_bytes()),
+            Value::PageType(v) => Self::pretty_hex(&v.to_be_bytes()),
             Value::CellStartOffset(v) => match v {
-                65536 => pretty_hex(&0_u16.to_be_bytes()),
-                _ => pretty_hex(&(*v as u16).to_be_bytes()),
+                65536 => Self::pretty_hex(&0_u16.to_be_bytes()),
+                _ => Self::pretty_hex(&(*v as u16).to_be_bytes()),
             },
+            Value::Unallocated(v) => Self::pretty_hex(v),
         }
+    }
+
+    pub fn trim_hex(&self, limit: usize) -> String {
+        match &self.value {
+            Value::Unallocated(v) => format!("{} ...", Self::pretty_hex(&v[..limit])),
+            _ => self.to_hex(),
+        }
+    }
+
+    pub fn trim_str(&self, limit: usize) -> String {
+        match &self.value {
+            Value::Unallocated(v) => format!("{:?} ...", &v[..limit]),
+            v => format!("{v}"),
+        }
+    }
+
+    fn pretty_hex(bytes: &[u8]) -> String {
+        bytes
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<String>>()
+            .join(" ")
     }
 }
 
@@ -80,6 +88,7 @@ pub enum Value {
     Version(u32),
     PageType(PageHeaderType),
     CellStartOffset(u32),
+    Unallocated(Box<[u8]>),
 }
 
 impl fmt::Display for Value {
@@ -108,6 +117,7 @@ impl fmt::Display for Value {
             }
             Self::PageType(v) => write!(f, "{v}"),
             Self::CellStartOffset(v) => write!(f, "{v}"),
+            Self::Unallocated(v) => write!(f, "{:?}", *v),
         }
     }
 }

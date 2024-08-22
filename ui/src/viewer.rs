@@ -4,15 +4,14 @@ use std::collections::HashMap;
 use std::include_bytes;
 use std::rc::Rc;
 
-use crate::BtreePage;
 use parser::Reader;
 
-use crate::pages::{AnyPage, RootPage};
+use crate::pages::PageView;
 
 #[derive(Debug)]
 pub struct Viewer {
     pub included_db: HashMap<&'static str, &'static [u8]>,
-    pub pages: Vec<Rc<dyn BtreePage>>,
+    pub pages: Vec<Rc<PageView>>,
 }
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -35,14 +34,11 @@ impl Viewer {
 
         let bytes = included_db.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;
-        let db_header = Rc::new(reader.db_header.clone());
-        let first_page = reader.get_page(1)?;
-        let root_page: Rc<dyn BtreePage> =
-            Rc::new(RootPage::new(db_header.clone(), first_page.clone()));
-        let mut pages = vec![root_page];
-        for n in 2..reader.pages_total() + 1 {
+        let mut pages = vec![];
+        for n in 1..reader.pages_total() + 1 {
+            // TODO: handle Err here via ui error message
             let page = reader.get_page(n)?;
-            let any_page: Rc<dyn BtreePage> = Rc::new(AnyPage::new(db_header.clone(), page, n));
+            let any_page = Rc::new(PageView::new(reader.db_header.clone(), page, n));
             pages.push(any_page);
         }
 
@@ -53,7 +49,7 @@ impl Viewer {
         self.included_db.keys().map(|k| k.to_string()).collect()
     }
 
-    pub fn first_page(&self) -> Rc<dyn BtreePage> {
+    pub fn first_page(&self) -> Rc<PageView> {
         // Having at least one part is guaranteed by `new_from_...` construct
         self.pages[0].clone()
     }

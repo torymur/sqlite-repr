@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
 
-use crate::Field;
+use crate::{Field, Value};
 
 #[component]
 pub fn Home(route: Vec<String>) -> Element {
@@ -124,11 +124,11 @@ pub fn SideBar() -> Element {
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
                             // page offset
-                            "{&page.page_size() * n as u64}",
+                            "{&page.db_header.page_size * n as u64}",
                         }
                         button {
                             class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
-                            class: if selected_page.read().id() == page.id() {"btn-active"},
+                            class: if selected_page.read().id == page.id {"btn-active"},
                             onclick: move |_| {
                                 *selected_page.write() = page.clone();
                                 *selected_part.write() = None;
@@ -242,6 +242,7 @@ pub fn Visual() -> Element {
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut formatting = use_context::<AppState>().format;
+    let mut trimmed = use_signal(|| true);
     rsx! {
         div {
             class: "flex items-center bg-secondary",
@@ -285,12 +286,16 @@ pub fn Visual() -> Element {
                             onmouseover:
                             {
                                 let part = part.clone();
+                                let field = field.clone();
                                 move |_| {
                                     *selected_field.write() = Some(field.clone());
                                     *selected_part.write() = Some(part.clone());
                                 }
                             },
-                            FormattedValue {field: field.clone()}
+                            onclick: move |_| {
+                                if let Value::Unallocated(_) = field.value { *trimmed.write() = !trimmed()}
+                            },
+                            FormattedValue {field: field.clone(), trimmed: trimmed()}
                         }
                     }
                 }
@@ -300,18 +305,19 @@ pub fn Visual() -> Element {
 }
 
 #[component]
-pub fn FormattedValue(field: Field) -> Element {
+pub fn FormattedValue(field: Field, trimmed: bool) -> Element {
     let formatting = use_context::<AppState>().format;
+    let limit: usize = 10;
     match formatting() {
         Format::Hybrid => {
             rsx! {
                 div {
                     class: "divide-y divide-secondary",
                     div {
-                        "{field.value}"
+                        if trimmed {"{field.trim_str(limit)}"} else {"{field.value}"}
                     }
                     div {
-                        "{field.to_hex()}"
+                        if trimmed {"{field.trim_hex(limit)}"} else {"{field.to_hex()}"}
                     }
                 }
             }
@@ -319,14 +325,14 @@ pub fn FormattedValue(field: Field) -> Element {
         Format::Hex => {
             rsx! {
                 div {
-                    "{field.to_hex()}"
+                    if trimmed {"{field.trim_hex(limit)}"} else {"{field.to_hex()}"}
                 }
             }
         }
         Format::Text => {
             rsx! {
                 div {
-                    "{field.value}"
+                    if trimmed {"{field.trim_str(limit)}"} else {"{field.value}"}
                 }
             }
         }
