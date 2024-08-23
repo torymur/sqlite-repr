@@ -1,11 +1,11 @@
 //! BTree Page exploration
 use crate::reader::DB_HEADER_SIZE;
-use crate::DBHeader;
-use crate::{slc, CellPointer, CELL_PTR_SIZE};
+use crate::{slc, Cell, DBHeader};
 use std::rc::Rc;
 
 const PAGE_HEADER_SIZE: usize = 12;
 const PAGE_RIGHT_PTR_SIZE: usize = 4;
+pub const CELL_PTR_SIZE: usize = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PageHeaderType {
@@ -123,6 +123,35 @@ impl TryFrom<&[u8]> for PageHeader {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct CellPointer {
+    /// Let K be the number of the cells on the btree, then
+    /// cell array are K*2 bytes integer to the cell contents.
+    /// 0 to handle 65536-byte page size w/o cells & no reserved space.
+    pub array: Vec<u32>,
+}
+
+impl CellPointer {
+    pub fn new(array: Vec<u32>) -> Self {
+        Self { array }
+    }
+}
+
+impl TryFrom<&[u8]> for CellPointer {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        let mut array = vec![];
+        for n in 0..buf.len() / CELL_PTR_SIZE {
+            let offset = slc!(buf, n * CELL_PTR_SIZE, CELL_PTR_SIZE, u16)
+                .checked_sub(1)
+                .map_or(65536, |x| (x + 1) as u32);
+            array.push(offset)
+        }
+        Ok(CellPointer::new(array))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Unallocated {
     pub array: Vec<u8>,
 }
@@ -153,6 +182,7 @@ pub struct Page {
     pub cell_pointer_offset: usize,
     pub unallocated: Unallocated,
     pub unallocated_offset: usize,
+    pub cells: Vec<Cell>,
 }
 
 impl Page {
@@ -163,6 +193,7 @@ impl Page {
         cell_pointer_offset: usize,
         unallocated: Unallocated,
         unallocated_offset: usize,
+        cells: Vec<Cell>,
     ) -> Self {
         Self {
             db_header,
@@ -171,6 +202,7 @@ impl Page {
             cell_pointer_offset,
             unallocated,
             unallocated_offset,
+            cells,
         }
     }
 }
@@ -201,6 +233,13 @@ impl TryFrom<(Option<Rc<DBHeader>>, &[u8])> for Page {
         let unallocated =
             Unallocated::try_from(&buf[unallocated_offset..unallocated_offset + unallocated_size])?;
 
+        // Parse cells, disclaimer: for now only Leaf Table Page.
+        let mut cells: Vec<Cell> = vec![];
+        for ptr in &cell_pointer.array {
+            let cell = Cell::try_from(&buf[*ptr as usize..])?;
+            cells.push(cell)
+        }
+
         Ok(Page::new(
             db_header,
             page_header,
@@ -208,6 +247,7 @@ impl TryFrom<(Option<Rc<DBHeader>>, &[u8])> for Page {
             ptr_offset,
             unallocated,
             unallocated_offset,
+            cells,
         ))
     }
 }

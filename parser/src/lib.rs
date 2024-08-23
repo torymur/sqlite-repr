@@ -5,10 +5,10 @@ pub mod header;
 pub mod page;
 pub mod reader;
 
-pub use cell::{CellPointer, CELL_PTR_SIZE};
-pub use header::DBHeader;
-pub use page::{Page, PageHeader, PageHeaderType};
-pub use reader::Reader;
+pub use cell::{Cell, Varint};
+pub use header::{DBHeader, TextEncoding};
+pub use page::{CellPointer, Page, PageHeader, PageHeaderType, Unallocated, CELL_PTR_SIZE};
+pub use reader::{Reader, DB_HEADER_SIZE};
 
 #[macro_export]
 macro_rules! slc {
