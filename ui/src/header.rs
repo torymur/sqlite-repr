@@ -11,16 +11,16 @@ pub struct DBHeaderPart {
 }
 
 impl Part for DBHeaderPart {
-    fn label(&self) -> &'static str {
-        "Database Header"
+    fn label(&self) -> String {
+        "Database Header".to_string()
     }
 
     fn desc(&self) -> &'static str {
         "The first 100 bytes of the database file comprise the database file header. All multibyte fields in the database file header are stored with the most significant byte first (big-endian)."
     }
 
-    fn color(&self) -> &'static str {
-        "orange"
+    fn color(&self) -> String {
+        "orange".to_string()
     }
 
     fn fields(&self) -> Vec<Field> {

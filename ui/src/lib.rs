@@ -10,14 +10,13 @@ pub mod viewer;
 use core::fmt;
 use std::rc::Rc;
 
-use parser::header::TextEncoding;
-use parser::page::PageHeaderType;
+use parser::*;
 
 pub trait Part: std::fmt::Debug {
-    fn label(&self) -> &'static str;
+    fn label(&self) -> String;
     fn desc(&self) -> &'static str;
     fn fields(&self) -> Vec<Field>;
-    fn color(&self) -> &'static str;
+    fn color(&self) -> String;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,6 +48,7 @@ impl Field {
                 _ => Self::pretty_hex(&(*v as u16).to_be_bytes()),
             },
             Value::Unallocated(v) => Self::pretty_hex(v),
+            Value::Varint(v) => Self::pretty_hex(&v.bytes),
         }
     }
 
@@ -89,6 +89,7 @@ pub enum Value {
     PageType(PageHeaderType),
     CellStartOffset(u32),
     Unallocated(Box<[u8]>),
+    Varint(Varint),
 }
 
 impl fmt::Display for Value {
@@ -118,6 +119,7 @@ impl fmt::Display for Value {
             Self::PageType(v) => write!(f, "{v}"),
             Self::CellStartOffset(v) => write!(f, "{v}"),
             Self::Unallocated(v) => write!(f, "{:?}", *v),
+            Self::Varint(v) => write!(f, "{}", v.value),
         }
     }
 }

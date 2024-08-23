@@ -1,9 +1,6 @@
 use std::rc::Rc;
 
-use parser::cell::{CellPointer, CELL_PTR_SIZE};
-use parser::header::DBHeader;
-use parser::page::{Page, PageHeader, Unallocated};
-use parser::reader::DB_HEADER_SIZE;
+use parser::*;
 
 use crate::header::DBHeaderPart;
 use crate::{Field, Part, Value};
@@ -47,6 +44,23 @@ impl PageView {
             Rc::new(UnallocatedPart::new(self.page.clone())),
         ];
 
+        // Generate CellPart(s).
+        let mut cells = self.page.cells.clone();
+        cells.reverse();
+        let mut offsets = self.page.cell_pointer.array.clone();
+        offsets.reverse();
+        let mut cell_parts: Vec<Rc<dyn Part>> = vec![];
+        for (n, cell) in cells.iter().enumerate() {
+            let offset = offsets[n] as usize;
+            cell_parts.push(Rc::new(CellPart {
+                cell: cell.clone(),
+                offset,
+                id: n + 1,
+            }))
+        }
+        parts.extend(cell_parts);
+
+        // Consider database header to go first.
         if self.id == 1 {
             parts.insert(
                 0,
@@ -78,16 +92,16 @@ impl PageHeaderPart {
 }
 
 impl Part for PageHeaderPart {
-    fn label(&self) -> &'static str {
-        "B-tree Page Header"
+    fn label(&self) -> String {
+        "B-tree Page Header".to_string()
     }
 
     fn desc(&self) -> &'static str {
         "The b-tree page header is 8 bytes in size for leaf pages and 12 bytes for interior pages. All multibyte values in the page header are big-endian.The cell pointer array of a b-tree page immediately follows the b-tree page header."
     }
 
-    fn color(&self) -> &'static str {
-        "green"
+    fn color(&self) -> String {
+        "green".to_string()
     }
 
     fn fields(&self) -> Vec<Field> {
@@ -163,16 +177,16 @@ impl CellPointerPart {
 }
 
 impl Part for CellPointerPart {
-    fn label(&self) -> &'static str {
-        "Cell pointer array"
+    fn label(&self) -> String {
+        "Cell pointer array".to_string()
     }
 
     fn desc(&self) -> &'static str {
         "The cell pointer array of a b-tree page immediately follows the b-tree page header. Let K be the number of cells on the btree. The cell pointer array consists of K 2-byte integer offsets to the cell contents. The cell pointers are arranged in key order with left-most cell (the cell with the smallest key) first and the right-most cell (the cell with the largest key) last."
     }
 
-    fn color(&self) -> &'static str {
-        "orange"
+    fn color(&self) -> String {
+        "orange".to_string()
     }
 
     fn fields(&self) -> Vec<Field> {
@@ -212,16 +226,16 @@ impl UnallocatedPart {
 }
 
 impl Part for UnallocatedPart {
-    fn label(&self) -> &'static str {
-        "Unallocated space"
+    fn label(&self) -> String {
+        "Unallocated space".to_string()
     }
 
     fn desc(&self) -> &'static str {
         "The area in between the last cell pointer array entry and the beginning of the first cell is the unallocated region. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array."
     }
 
-    fn color(&self) -> &'static str {
-        "green"
+    fn color(&self) -> String {
+        "green".to_string()
     }
 
     fn fields(&self) -> Vec<Field> {
@@ -230,7 +244,48 @@ impl Part for UnallocatedPart {
             self.offset,
             self.unallocated.array.len(),
             Value::Unallocated((&*self.unallocated.array).into()),
-            //Value::Unallocated(Box::new(&*self.unallocated.array.into())),
         )]
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CellPart {
+    pub id: usize,
+    pub cell: Cell,
+    pub offset: usize,
+}
+
+impl Part for CellPart {
+    fn label(&self) -> String {
+        format!("Cell Content {}", self.id)
+    }
+
+    fn desc(&self) -> &'static str {
+        "The format of a cell depends on which kind of b-tree page the cell appears on. Cell elements like number of bytes of payload and rowid are encoded by a variable-length integer or 'varint', which is a static Huffman encoding of 64-bit twos-complement integers, that uses less space for small positive values."
+    }
+
+    fn color(&self) -> String {
+        if self.id % 2 == 0 {
+            "green".to_string()
+        } else {
+            "orange".to_string()
+        }
+    }
+
+    fn fields(&self) -> Vec<Field> {
+        vec![
+            Field::new(
+                "A varint, which is the total number of bytes of payload, including any overflow.",
+                self.offset,
+                self.cell.payload_varint.bytes.len(),
+                Value::Varint(self.cell.payload_varint.clone()),
+            ),
+            Field::new(
+                "A varint which is the integer key, a.k.a. 'rowid'.",
+                self.offset + self.cell.payload_varint.bytes.len(),
+                self.cell.rowid_varint.bytes.len(),
+                Value::Varint(self.cell.rowid_varint.clone()),
+            ),
+        ]
     }
 }

@@ -150,7 +150,7 @@ pub fn Description() -> Element {
     let selected_part = use_context::<AppState>().selected_part;
     let selected_field = use_context::<AppState>().selected_field;
     let (part_desc, part_label) = match selected_part() {
-        None => ("", ""),
+        None => ("", "".to_string()),
         Some(p) => (p.desc(), p.label()),
     };
     match selected_field() {
@@ -278,7 +278,7 @@ pub fn Visual() -> Element {
                 for field in part.fields() {
                     div {
                         div {
-                            class: "mb-0 mt-1 leading-tight tracking-tighter font-medium text-{part.color()}-800",
+                            class: "mb-0 mt-1 pr-2 leading-tight tracking-tighter font-medium text-{part.color()}-800",
                             "{field.offset}",
                         }
                         div {
@@ -308,16 +308,26 @@ pub fn Visual() -> Element {
 pub fn FormattedValue(field: Field, trimmed: bool) -> Element {
     let formatting = use_context::<AppState>().format;
     let limit: usize = 10;
+    let hex = if trimmed {
+        field.trim_hex(limit)
+    } else {
+        field.to_hex()
+    };
+    let text = if trimmed {
+        field.trim_str(limit)
+    } else {
+        field.value.to_string()
+    };
     match formatting() {
         Format::Hybrid => {
             rsx! {
                 div {
                     class: "divide-y divide-secondary",
                     div {
-                        if trimmed {"{field.trim_str(limit)}"} else {"{field.value}"}
+                        "{text}"
                     }
                     div {
-                        if trimmed {"{field.trim_hex(limit)}"} else {"{field.to_hex()}"}
+                        "{hex}"
                     }
                 }
             }
@@ -325,14 +335,14 @@ pub fn FormattedValue(field: Field, trimmed: bool) -> Element {
         Format::Hex => {
             rsx! {
                 div {
-                    if trimmed {"{field.trim_hex(limit)}"} else {"{field.to_hex()}"}
+                    "{hex}"
                 }
             }
         }
         Format::Text => {
             rsx! {
                 div {
-                    if trimmed {"{field.trim_str(limit)}"} else {"{field.value}"}
+                    "{text}"
                 }
             }
         }
