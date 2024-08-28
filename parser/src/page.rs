@@ -1,6 +1,5 @@
-//! BTree Page exploration
-use crate::reader::DB_HEADER_SIZE;
-use crate::{slc, Cell, DBHeader};
+/// BTree Page exploration
+use crate::{slc, Cell, DBHeader, Result, StdError, DB_HEADER_SIZE};
 use std::rc::Rc;
 
 const PAGE_HEADER_SIZE: usize = 12;
@@ -22,7 +21,7 @@ impl PageHeaderType {
 }
 
 impl TryFrom<u8> for PageHeaderType {
-    type Error = String;
+    type Error = StdError;
 
     fn try_from(byte: u8) -> Result<Self, Self::Error> {
         match byte {
@@ -30,7 +29,7 @@ impl TryFrom<u8> for PageHeaderType {
             5 => Ok(PageHeaderType::InteriorTable),
             10 => Ok(PageHeaderType::LeafIndex),
             13 => Ok(PageHeaderType::LeafTable),
-            _ => Err(format!("Unexpected btree page type: {}", byte)),
+            _ => Err(format!("Unexpected btree page type: {}", byte))?,
         }
     }
 }
@@ -77,6 +76,8 @@ pub struct PageHeader {
     /// right most pointer, value exists only in the header of interior b-tree pages
     /// offset: 8, size: 4
     pub page_num: Option<u32>,
+    /// size of page header
+    pub size: usize,
 }
 
 impl PageHeader {
@@ -88,6 +89,12 @@ impl PageHeader {
         fragmented_free_bytes: u8,
         page_num: Option<u32>,
     ) -> Self {
+        // For leaf pages page header is actually 8, not 12 bytes
+        let size = if page_type.is_interior() {
+            PAGE_HEADER_SIZE
+        } else {
+            PAGE_HEADER_SIZE - PAGE_RIGHT_PTR_SIZE
+        };
         Self {
             page_type,
             free_block_offset,
@@ -95,12 +102,13 @@ impl PageHeader {
             cell_start_offset,
             fragmented_free_bytes,
             page_num,
+            size,
         }
     }
 }
 
 impl TryFrom<&[u8]> for PageHeader {
-    type Error = Box<dyn std::error::Error>;
+    type Error = StdError;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let page_type = PageHeaderType::try_from(slc!(buf, 0, 1, u8))?;
@@ -137,7 +145,7 @@ impl CellPointer {
 }
 
 impl TryFrom<&[u8]> for CellPointer {
-    type Error = Box<dyn std::error::Error>;
+    type Error = StdError;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let mut array = vec![];
@@ -163,7 +171,7 @@ impl Unallocated {
 }
 
 impl TryFrom<&[u8]> for Unallocated {
-    type Error = Box<dyn std::error::Error>;
+    type Error = StdError;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let array = buf
@@ -176,77 +184,70 @@ impl TryFrom<&[u8]> for Unallocated {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Page {
-    pub db_header: Option<Rc<DBHeader>>,
+    pub id: usize,
+    pub db_header: Rc<DBHeader>,
     pub page_header: PageHeader,
     pub cell_pointer: CellPointer,
-    pub cell_pointer_offset: usize,
     pub unallocated: Unallocated,
-    pub unallocated_offset: usize,
     pub cells: Vec<Cell>,
 }
 
 impl Page {
     pub fn new(
-        db_header: Option<Rc<DBHeader>>,
+        id: usize,
+        db_header: Rc<DBHeader>,
         page_header: PageHeader,
         cell_pointer: CellPointer,
-        cell_pointer_offset: usize,
         unallocated: Unallocated,
-        unallocated_offset: usize,
         cells: Vec<Cell>,
     ) -> Self {
         Self {
+            id,
             db_header,
             page_header,
             cell_pointer,
-            cell_pointer_offset,
             unallocated,
-            unallocated_offset,
             cells,
         }
     }
 }
 
-impl TryFrom<(Option<Rc<DBHeader>>, &[u8])> for Page {
-    type Error = Box<dyn std::error::Error>;
+impl TryFrom<(Rc<DBHeader>, usize, &[u8])> for Page {
+    type Error = StdError;
 
-    fn try_from(value: (Option<Rc<DBHeader>>, &[u8])) -> Result<Self, Self::Error> {
-        let (db_header, buf) = value;
-        let page_header = PageHeader::try_from(&buf[0..PAGE_HEADER_SIZE])?;
+    fn try_from(value: (Rc<DBHeader>, usize, &[u8])) -> Result<Self, Self::Error> {
+        let (db_header, page_num, buf) = value;
 
-        // Create cell pointer array.
-        // For leaf pages page header is actually 8, not 12 bytes
-        let ptr_offset = if page_header.page_type.is_interior() {
-            PAGE_HEADER_SIZE
-        } else {
-            PAGE_HEADER_SIZE - PAGE_RIGHT_PTR_SIZE
+        // -- Create page header.
+        let mut offset = match page_num {
+            1 => DB_HEADER_SIZE,
+            _ => 0,
         };
+        let page_header = PageHeader::try_from(&buf[offset..offset + PAGE_HEADER_SIZE])?;
+        offset += page_header.size;
+
+        // -- Create cell pointer array.
         let ptrs_size = page_header.cell_num as usize * CELL_PTR_SIZE;
-        let unallocated_offset = ptr_offset + ptrs_size;
-        let cell_pointer = CellPointer::try_from(&buf[ptr_offset..unallocated_offset])?;
+        let cell_pointer = CellPointer::try_from(&buf[offset..offset + ptrs_size])?;
+        offset += ptrs_size;
 
-        // Make an unallocated space.
-        let unallocated_size = match db_header {
-            None => page_header.cell_start_offset as usize - unallocated_offset,
-            Some(_) => page_header.cell_start_offset as usize - unallocated_offset - DB_HEADER_SIZE,
-        };
-        let unallocated =
-            Unallocated::try_from(&buf[unallocated_offset..unallocated_offset + unallocated_size])?;
+        // -- Make an unallocated space.
+        let unallocated_size = page_header.cell_start_offset as usize - offset;
+        let unallocated = Unallocated::try_from(&buf[offset..offset + unallocated_size])?;
 
-        // Parse cells, disclaimer: for now only Leaf Table Page.
+        // -- Parse cells [only Leaf Table Page for now]
         let mut cells: Vec<Cell> = vec![];
         for ptr in &cell_pointer.array {
-            let cell = Cell::try_from(&buf[*ptr as usize..])?;
+            let cell = Cell::try_from((db_header.text_encoding, &buf[*ptr as usize..]))?;
             cells.push(cell)
         }
 
         Ok(Page::new(
+            page_num,
             db_header,
             page_header,
             cell_pointer,
-            ptr_offset,
             unallocated,
-            unallocated_offset,
             cells,
         ))
     }

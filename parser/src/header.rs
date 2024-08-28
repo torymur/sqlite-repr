@@ -5,7 +5,7 @@
 
 use std::rc::Rc;
 
-use crate::slc;
+use crate::{slc, StdError};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TextEncoding {
@@ -126,7 +126,7 @@ pub struct DBHeader {
 }
 
 impl TryFrom<&[u8; 100]> for DBHeader {
-    type Error = Box<dyn std::error::Error>;
+    type Error = StdError;
 
     fn try_from(buf: &[u8; 100]) -> Result<Self, Self::Error> {
         Ok(Self::new(

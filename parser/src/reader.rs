@@ -1,4 +1,4 @@
-use crate::{DBHeader, Page};
+use crate::{DBHeader, Page, Result, StdError};
 use std::rc::Rc;
 
 pub const DB_HEADER_SIZE: usize = 100;
@@ -9,10 +9,8 @@ pub struct Reader {
     pub db_header: Rc<DBHeader>,
 }
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
 impl Reader {
-    pub fn new(bytes: &'static [u8]) -> Result<Self> {
+    pub fn new(bytes: &'static [u8]) -> Result<Self, StdError> {
         if bytes.len() < DB_HEADER_SIZE {
             return Err(Self::incomplete(
                 "read",
@@ -37,13 +35,7 @@ impl Reader {
         let page_size = self.db_header.page_size as usize;
         let mut b_page = vec![0; page_size];
         b_page.clone_from_slice(&self.bytes[page_offset..page_offset + page_size]);
-
-        let db_header = if page_num == 1 {
-            Some(self.db_header.clone())
-        } else {
-            None
-        };
-        let page = Page::try_from((db_header, b_page.as_slice()))?;
+        let page = Page::try_from((self.db_header.clone(), page_num, b_page.as_slice()))?;
         Ok(page)
     }
 
@@ -80,10 +72,11 @@ impl Reader {
 
     fn page_offset(&self, page_num: usize) -> usize {
         // "Index perspective" helps simplify math of pointers to interior pages
-        ((page_num - 1) * self.db_header.page_size as usize).max(DB_HEADER_SIZE)
+        //((page_num - 1) * self.db_header.page_size as usize).max(DB_HEADER_SIZE)
+        (page_num - 1) * self.db_header.page_size as usize
     }
 
-    fn incomplete(op: &str, what: &str, expected: usize, got: usize) -> Box<dyn std::error::Error> {
+    fn incomplete(op: &str, what: &str, expected: usize, got: usize) -> StdError {
         format!(
             "Incomplete {} of {}, expected to read {} bytes, got: {}",
             what, op, expected, got
