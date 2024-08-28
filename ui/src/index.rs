@@ -124,7 +124,7 @@ pub fn SideBar() -> Element {
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
                             // page offset
-                            "{&page.db_header.page_size * n as u64}",
+                            "{&page.page.db_header.page_size * n as u64}",
                         }
                         button {
                             class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
@@ -283,6 +283,7 @@ pub fn Visual() -> Element {
                         }
                         div {
                             class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary border-t-4 border-{part.color()}-800",
+                            class: "{field.style}",
                             onmouseover:
                             {
                                 let part = part.clone();

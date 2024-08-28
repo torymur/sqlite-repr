@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::include_bytes;
 use std::rc::Rc;
 
-use parser::Reader;
+use parser::{Reader, StdError};
 
 use crate::pages::PageView;
 
@@ -14,7 +14,7 @@ pub struct Viewer {
     pub pages: Vec<Rc<PageView>>,
 }
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type Result<T, E = StdError> = std::result::Result<T, E>;
 
 // Preloaded examples of databases to start UI with something
 pub const SIMPLE_DB_BYTES: &[u8] = include_bytes!("../included/simple");
@@ -25,7 +25,7 @@ pub const BIG_PAGE_DB: &str = "Big page";
 pub const TWO_TABLES_DB: &str = "Two tables";
 
 impl Viewer {
-    pub fn new_from_included(name: &str) -> Result<Self> {
+    pub fn new_from_included(name: &str) -> Result<Self, StdError> {
         let included_db = HashMap::from([
             (SIMPLE_DB, SIMPLE_DB_BYTES),
             (BIG_PAGE_DB, BIG_PAGE_DB_BYTES),
@@ -38,7 +38,7 @@ impl Viewer {
         for n in 1..reader.pages_total() + 1 {
             // TODO: handle Err here via ui error message
             let page = reader.get_page(n)?;
-            let any_page = Rc::new(PageView::new(reader.db_header.clone(), page, n));
+            let any_page = Rc::new(PageView::new(page));
             pages.push(any_page);
         }
 

@@ -25,6 +25,7 @@ pub struct Field {
     pub offset: usize,
     pub size: usize,
     pub value: Value,
+    pub style: &'static str,
 }
 
 impl Field {
@@ -49,6 +50,14 @@ impl Field {
             },
             Value::Unallocated(v) => Self::pretty_hex(v),
             Value::Varint(v) => Self::pretty_hex(&v.bytes),
+            Value::Record(record) => match record.value {
+                RecordType::Null
+                | RecordType::Zero(_)
+                | RecordType::One(_)
+                | RecordType::Blob(None)
+                | RecordType::Text(None) => "─".to_string(),
+                _ => Self::pretty_hex(record.bytes.as_ref().map_or(&[], |b| b)),
+            },
         }
     }
 
@@ -90,6 +99,7 @@ pub enum Value {
     CellStartOffset(u32),
     Unallocated(Box<[u8]>),
     Varint(Varint),
+    Record(RecordValue),
 }
 
 impl fmt::Display for Value {
@@ -120,17 +130,40 @@ impl fmt::Display for Value {
             Self::CellStartOffset(v) => write!(f, "{v}"),
             Self::Unallocated(v) => write!(f, "{:?}", *v),
             Self::Varint(v) => write!(f, "{}", v.value),
+            Value::Record(record) => match &record.value {
+                RecordType::Null => write!(f, "Null"),
+                RecordType::Zero(v) | RecordType::One(v) => write!(f, "Integer {v}"),
+                RecordType::I8(v) => write!(f, "{v}"),
+                RecordType::I16(v) => write!(f, "{v}"),
+                RecordType::I24(v) => write!(f, "{v}"),
+                RecordType::I32(v) => write!(f, "{v}"),
+                RecordType::I48(v) => write!(f, "{v}"),
+                RecordType::I64(v) => write!(f, "{v}"),
+                RecordType::F64(v) => write!(f, "{v}"),
+                RecordType::Ten | RecordType::Eleven => write!(f, "Internal codes"),
+                RecordType::Blob(Some(v)) => write!(f, "Blob {:?}", v),
+                RecordType::Text(Some(v)) => write!(f, "{v}"),
+                RecordType::Blob(None) => write!(f, "Empty Blob"),
+                RecordType::Text(None) => write!(f, "Empty Text"),
+            },
         }
     }
 }
 
 impl Field {
-    pub fn new(desc: &'static str, offset: usize, size: usize, value: Value) -> Self {
+    pub fn new(
+        desc: &'static str,
+        offset: usize,
+        size: usize,
+        value: Value,
+        style: &'static str,
+    ) -> Self {
         Self {
             desc,
             offset,
             size,
             value,
+            style,
         }
     }
 }

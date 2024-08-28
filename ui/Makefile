@@ -25,3 +25,7 @@ included/two_tables:
 .PHONY: clean
 clean:
 	rm -rf included
+
+.PHONY: mini
+mini: 
+	npx tailwindcss -o assets/tailwind.css --minify
