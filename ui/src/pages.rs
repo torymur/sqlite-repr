@@ -270,20 +270,21 @@ impl Part for CellPart {
 
     fn fields(&self) -> Vec<Field> {
         let rowid_offset = self.offset + self.cell.payload_varint.bytes.len();
+        let cell_header_style = "bg-slate-300";
         let mut fields = vec![
             Field::new(
-                "A varint, which is the total number of bytes of payload, including any overflow.",
+                "Cell Header. A varint, which is the total number of bytes of payload, including any overflow.",
                 self.offset,
                 self.cell.payload_varint.bytes.len(),
                 Value::Varint(self.cell.payload_varint.clone()),
-                "",
+                cell_header_style,
             ),
             Field::new(
-                "A varint which is the integer key, a.k.a. 'rowid'.",
+                "Cell Header. A varint which is the integer key, a.k.a. 'rowid'.",
                 rowid_offset,
                 self.cell.rowid_varint.bytes.len(),
                 Value::Varint(self.cell.rowid_varint.clone()),
-                "",
+                cell_header_style,
             ),
         ];
 
@@ -293,25 +294,25 @@ impl Part for CellPart {
         };
 
         let payload_offset = rowid_offset + self.cell.rowid_varint.bytes.len();
-        let header_style = "bg-slate-400";
+        let record_header_style = "bg-slate-330";
         fields.push(
             Field::new(
-                "Cell payload starts with payload header. First value in the header is varint, which determines total number of bytes in the header, including the size of varint.",
+                "Cell Payload: Record Header. First value is varint, which determines total number of bytes in the header, including the size of varint.",
                 payload_offset,
                 payload.header.size.bytes.len(),
                 Value::Varint(payload.header.size.clone()),
-                header_style,
+                record_header_style,
             )
         );
         let mut offset = payload_offset + payload.header.size.bytes.len();
         for datatype in &payload.header.datatypes {
             fields.push(
                 Field::new(
-                    "In payload header second value(s) are one or more additional varints, one per column, which determine the datatype of each column ('serial types').",
+                    "Cell Payload: Record Header. Second value(s) are one or more additional varints, one per column, which determine the datatype of each column ('serial types').",
                     offset,
                     datatype.bytes.len(),
                     Value::Varint(datatype.clone()),
-                    header_style,
+                    record_header_style,
                 )
             );
             offset += datatype.bytes.len();
@@ -320,12 +321,12 @@ impl Part for CellPart {
         for record in &payload.values {
             let size = record.bytes.as_ref().map_or(0, |b| b.len());
             let style = if size == 0 {
-                "pattern-vertical-lines pattern-white pattern-bg-zinc-200 pattern-size-1 pattern-opacity-60"
+                "pattern-vertical-lines pattern-white pattern-bg-slate-200 pattern-size-1 pattern-opacity-60 bg-slate-360"
             } else {
-                ""
+                "bg-slate-360"
             };
             fields.push(Field::new(
-                "Payload values. The values for each column in the record immediately follow the header. For serial types 0, 8, 9, 12, and 13, the value is zero bytes in length. If all columns are of these types then the body section of the record is empty. A record might have fewer values than the number of columns in the corresponding table. This can happen, for example, after an ALTER TABLE ... ADD COLUMN SQL statement has increased the number of columns in the table schema without modifying preexisting rows in the table. Missing values at the end of the record are filled in using the default value for the corresponding columns defined in the table schema.",
+                "Cell Payload: Record Payload. The values for each column in the record immediately follow the header. For serial types 0, 8, 9, 12, and 13, the value is zero bytes in length. If all columns are of these types then the body section of the record is empty. A record might have fewer values than the number of columns in the corresponding table. This can happen, for example, after an ALTER TABLE ... ADD COLUMN SQL statement has increased the number of columns in the table schema without modifying preexisting rows in the table. Missing values at the end of the record are filled in using the default value for the corresponding columns defined in the table schema.",
                 offset,
                 size,
                 Value::Record(record.clone()),

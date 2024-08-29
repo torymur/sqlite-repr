@@ -7,9 +7,12 @@ module.exports = {
     "pattern-opacity-60",
     "pattern-white",
     "pattern-size-1",
-    "pattern-bg-zinc-200",
+    "pattern-bg-slate-200",
     {
-        pattern: /(bg|text|border)-(orange|green|slate)-(400|700|800|900)/,
+        pattern: /(bg|text|border)-(orange|green|slate)-(600|700|800)/,
+    },
+    {
+        pattern: /bg-slate-([1-4][0-9]0)/,
     },
   ],
   daisyui: {
@@ -23,7 +26,15 @@ module.exports = {
     ],
   },
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        slate: {
+          330: "#b8c2d0",
+          360: "#aab4c4",
+          390: "#9ea8bb",
+        }
+      },
+    },
   },
   plugins: [
     require("@tailwindcss/typography"),

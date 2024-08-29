@@ -26,7 +26,7 @@ pub fn Header() -> Element {
 
     rsx! {
         div {
-            class: "h-12 flex items-center bg-primary",
+            class: "h-12 flex items-center bg-slate-200",
             div {
                 class: "text-xl font-bold tracking-tighter pl-4",
                 "SQLite File Format",
@@ -282,7 +282,7 @@ pub fn Visual() -> Element {
                             "{field.offset}",
                         }
                         div {
-                            class: "p-1 outline outline-1 outline-secondary bg-primary hover:bg-secondary border-t-4 border-{part.color()}-800",
+                            class: "p-1 outline outline-1 outline-secondary bg-slate-200 hover:bg-secondary border-t-4 border-{part.color()}-800",
                             class: "{field.style}",
                             onmouseover:
                             {
