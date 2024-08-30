@@ -204,13 +204,13 @@ impl Part for CellPointerPart {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnallocatedPart {
-    pub unallocated: Rc<Unallocated>,
+    pub unallocated: Vec<u8>,
     pub offset: usize,
 }
 
 impl UnallocatedPart {
     pub fn new(page: Rc<Page>) -> Self {
-        let unallocated = Rc::new(page.unallocated.clone());
+        let unallocated = page.unallocated.clone();
         let mut offset = if page.id == 1 { DB_HEADER_SIZE } else { 0 };
         offset += page.page_header.size + page.page_header.cell_num as usize * CELL_PTR_SIZE;
         Self {
@@ -237,8 +237,8 @@ impl Part for UnallocatedPart {
         vec![Field::new(
             "The total amount of free space on a b-tree page consists of the size of the unallocated region plus the total size of all freeblocks plus the number of fragmented free bytes. SQLite may from time to time reorganize a b-tree page so that there are no freeblocks or fragment bytes, all unused bytes are contained in the unallocated space region, and all cells are packed tightly at the end of the page. This is called 'defragmenting' the b-tree page.",
             self.offset,
-            self.unallocated.array.len(),
-            Value::Unallocated((&*self.unallocated.array).into()),
+            self.unallocated.len(),
+            Value::Unallocated(self.unallocated.clone().into_boxed_slice()),
             ""
         )]
     }

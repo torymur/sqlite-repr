@@ -160,35 +160,12 @@ impl TryFrom<&[u8]> for CellPointer {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Unallocated {
-    pub array: Vec<u8>,
-}
-
-impl Unallocated {
-    pub fn new(array: Vec<u8>) -> Self {
-        Self { array }
-    }
-}
-
-impl TryFrom<&[u8]> for Unallocated {
-    type Error = StdError;
-
-    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
-        let array = buf
-            .iter()
-            .map(|b| u8::from_be_bytes([*b; 1]))
-            .collect::<Vec<u8>>();
-        Ok(Unallocated::new(array))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct Page {
     pub id: usize,
     pub db_header: Rc<DBHeader>,
     pub page_header: PageHeader,
     pub cell_pointer: CellPointer,
-    pub unallocated: Unallocated,
+    pub unallocated: Vec<u8>,
     pub cells: Vec<Cell>,
 }
 
@@ -198,7 +175,7 @@ impl Page {
         db_header: Rc<DBHeader>,
         page_header: PageHeader,
         cell_pointer: CellPointer,
-        unallocated: Unallocated,
+        unallocated: Vec<u8>,
         cells: Vec<Cell>,
     ) -> Self {
         Self {
@@ -233,12 +210,21 @@ impl TryFrom<(Rc<DBHeader>, usize, &[u8])> for Page {
 
         // -- Make an unallocated space.
         let unallocated_size = page_header.cell_start_offset as usize - offset;
-        let unallocated = Unallocated::try_from(&buf[offset..offset + unallocated_size])?;
+        let unallocated = buf[offset..offset + unallocated_size]
+            .iter()
+            .map(|b| u8::from_be_bytes([*b; 1]))
+            .collect::<Vec<u8>>();
 
         // -- Parse cells [only Leaf Table Page for now]
         let mut cells: Vec<Cell> = vec![];
         for ptr in &cell_pointer.array {
-            let cell = Cell::try_from((db_header.text_encoding, &buf[*ptr as usize..]))?;
+            let params = (
+                db_header.text_encoding,
+                db_header.page_size,
+                db_header.reserved_page_space,
+                &buf[*ptr as usize..],
+            );
+            let cell = Cell::try_from(params)?;
             cells.push(cell)
         }
 

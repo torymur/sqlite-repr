@@ -10,7 +10,7 @@ pub mod varint;
 
 pub use cell::Cell;
 pub use header::{DBHeader, TextEncoding};
-pub use page::{CellPointer, Page, PageHeader, PageHeaderType, Unallocated, CELL_PTR_SIZE};
+pub use page::{CellPointer, Page, PageHeader, PageHeaderType, CELL_PTR_SIZE};
 pub use reader::{Reader, DB_HEADER_SIZE};
 pub use record::{Record, RecordType, RecordValue};
 pub use varint::Varint;
