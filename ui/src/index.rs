@@ -113,8 +113,8 @@ pub fn SideBar() -> Element {
         div {
             class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit",
             div {
-                class: "font-bold truncate pb-4",
-                "B-tree Pages",
+                class: "text-lg font-bold truncate pb-4",
+                "🗐  Pages",
             }
             div {
                 for (n, page) in pages.into_iter().enumerate() {
@@ -124,11 +124,11 @@ pub fn SideBar() -> Element {
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
                             // page offset
-                            "{&page.page.db_header.page_size * n as u64}",
+                            "{&page.size() * n}",
                         }
                         button {
                             class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
-                            class: if selected_page.read().id == page.id {"btn-active"},
+                            class: if selected_page.read().id() == page.id() {"btn-active"},
                             onclick: move |_| {
                                 *selected_page.write() = page.clone();
                                 *selected_part.write() = None;

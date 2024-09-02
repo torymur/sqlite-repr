@@ -3,6 +3,7 @@
 
 pub mod cell;
 pub mod header;
+pub mod overflow;
 pub mod page;
 pub mod reader;
 pub mod record;
@@ -10,9 +11,10 @@ pub mod varint;
 
 pub use cell::Cell;
 pub use header::{DBHeader, TextEncoding};
+pub use overflow::{OverflowData, OverflowPage, OverflowUnit};
 pub use page::{CellPointer, Page, PageHeader, PageHeaderType, CELL_PTR_SIZE};
 pub use reader::{Reader, DB_HEADER_SIZE};
-pub use record::{Record, RecordType, RecordValue};
+pub use record::{Record, RecordCode, RecordType, RecordValue};
 pub use varint::Varint;
 
 pub type StdError = Box<dyn std::error::Error + Sync + Send + 'static>;

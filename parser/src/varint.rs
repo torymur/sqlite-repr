@@ -16,7 +16,7 @@ pub struct Varint {
 
 impl Varint {
     pub fn new(buf: &[u8]) -> Varint {
-        let mut value = 0_i64;
+        let mut value: i64 = 0;
         let mut bytes: Vec<u8> = vec![];
 
         // To check if higher order bit is set => varint byte, 0x80: 10000000
@@ -24,29 +24,12 @@ impl Varint {
         // To drop higher order bit, 0x7F: 01111111
         let drop_msb_mask = 0x7F;
 
-        for (n, &byte) in buf.iter().enumerate() {
-            match n {
-                0 => {
-                    // Assumption is that first byte doesn't have to have msb = 1
-                    value = (byte & drop_msb_mask) as i64;
-                    bytes.push(byte);
-                }
-                8 => {
-                    // All 8 bits of the ninth byte are used to reconstruct
-                    value = (value << 8) | byte as i64;
-                    bytes.push(byte);
-                    // Varint could not be longer than 9 bytes
-                    break;
-                }
-                _ => {
-                    if (byte & varint_mask) == 0 {
-                        // Then this byte doesn't belong to varint
-                        break;
-                    } else {
-                        value = (value << 7) | (byte & drop_msb_mask) as i64;
-                        bytes.push(byte);
-                    }
-                }
+        for &byte in buf {
+            bytes.push(byte);
+            value = (value << 7) | (byte & drop_msb_mask) as i64;
+
+            if (byte & varint_mask) == 0 {
+                return Varint { value, bytes };
             }
         }
         Varint { value, bytes }
@@ -60,12 +43,12 @@ mod tests {
     #[test]
     fn test_decode_varint() {
         let res = Varint::new(&[0x88, 0x43]);
-        assert_eq!((res.value, res.bytes), (0x08, vec![0x88]));
+        assert_eq!((res.value, res.bytes), (0x443, vec![0x88, 0x43]));
 
         let res = Varint::new(&[0x04, 0x88, 0x43]);
-        assert_eq!((res.value, res.bytes), (0x208, vec![0x04, 0x88]));
+        assert_eq!((res.value, res.bytes), (0x4, vec![0x04]));
 
         let res = Varint::new(&[0x88; 10]);
-        assert_eq!((res.value, res.bytes), (1161999626690365576, vec![0x88; 9]));
+        assert_eq!((res.value, res.bytes), (580999813345182728, vec![0x88; 10]));
     }
 }
