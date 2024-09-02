@@ -17,12 +17,21 @@ impl TryFrom<(TextEncoding, &[u8])> for Record {
 
     fn try_from(value: (TextEncoding, &[u8])) -> Result<Self, Self::Error> {
         let (text_encoding, buf) = value;
+
+        // Record header usually accessable without consulting an overflow page.
+        // TODO: an example, which will cover for header spillover.
         let header = RecordHeader::try_from(buf)?;
 
         let mut values = vec![];
-        let mut offset: usize = header.size.value as usize;
+        let mut offset = header.size.value as usize;
         for datatype in &header.datatypes {
-            let value = RecordValue::new(datatype.value, text_encoding, &buf[offset..])?;
+            let bytes = &buf[offset..];
+            if bytes.is_empty() {
+                // End of the page, means there is an payload overflow.
+                break;
+            }
+
+            let value = RecordValue::new(datatype.value, text_encoding, bytes)?;
             offset += value.bytes.as_ref().map_or(0, |b| b.len());
             values.push(value);
         }
@@ -56,12 +65,6 @@ impl TryFrom<&[u8]> for RecordHeader {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RecordValue {
-    pub value: RecordType,
-    pub bytes: Option<Vec<u8>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum RecordType {
     Null,
     I8(i8),
@@ -79,15 +82,43 @@ pub enum RecordType {
     Text(Option<String>),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordCode;
+
+impl RecordCode {
+    pub fn size(code: i64) -> usize {
+        match code {
+            0 | 8 | 9 | 12 | 13 => 0,
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            4 => 4,
+            5 => 6,
+            6 => 8,
+            7 => 8,
+            n if n >= 12 && n % 2 == 0 => ((n - 12) / 2) as usize,
+            n if n >= 13 && n % 2 != 0 => ((n - 13) / 2) as usize,
+            _ => unreachable!("Record Value of unknown serial type."),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordValue {
+    pub value: RecordType,
+    pub bytes: Option<Vec<u8>>,
+}
+
 impl RecordValue {
     pub fn new(code: i64, text_encoding: TextEncoding, buf: &[u8]) -> Result<Self, StdError> {
+        let size = RecordCode::size(code);
         match code {
             0 => Ok(Self {
                 value: RecordType::Null,
                 bytes: None,
             }),
             1 => {
-                let bytes = &buf[..1];
+                let bytes = &buf[..size];
                 let value = RecordType::I8(i8::from_be_bytes(bytes.try_into()?));
                 Ok(Self {
                     bytes: Some(bytes.to_vec()),
@@ -95,7 +126,7 @@ impl RecordValue {
                 })
             }
             2 => {
-                let bytes = &buf[..2];
+                let bytes = &buf[..size];
                 let value = RecordType::I16(i16::from_be_bytes(bytes.try_into()?));
                 Ok(Self {
                     bytes: Some(bytes.to_vec()),
@@ -105,15 +136,15 @@ impl RecordValue {
             3 => {
                 let mut bytes: [u8; 4] = [0; 4];
                 let bytes_ref = &mut bytes.as_mut_slice()[1..];
-                bytes_ref.copy_from_slice(&buf[..3]);
+                bytes_ref.copy_from_slice(&buf[..size]);
                 let value = RecordType::I24(i32::from_be_bytes(bytes));
                 Ok(Self {
-                    bytes: Some(buf[..3].to_vec()),
+                    bytes: Some(buf[..size].to_vec()),
                     value,
                 })
             }
             4 => {
-                let bytes = &buf[..4];
+                let bytes = &buf[..size];
                 let value = RecordType::I32(i32::from_be_bytes(bytes.try_into()?));
                 Ok(Self {
                     bytes: Some(bytes.to_vec()),
@@ -123,15 +154,15 @@ impl RecordValue {
             5 => {
                 let mut bytes: [u8; 8] = [0; 8];
                 let bytes_ref = &mut bytes.as_mut_slice()[2..];
-                bytes_ref.copy_from_slice(&buf[..6]);
+                bytes_ref.copy_from_slice(&buf[..size]);
                 let value = RecordType::I48(i64::from_be_bytes(bytes));
                 Ok(Self {
-                    bytes: Some(buf[..6].to_vec()),
+                    bytes: Some(buf[..size].to_vec()),
                     value,
                 })
             }
             6 => {
-                let bytes = &buf[..8];
+                let bytes = &buf[..size];
                 let value = RecordType::I64(i64::from_be_bytes(bytes.try_into()?));
                 Ok(Self {
                     bytes: Some(bytes.to_vec()),
@@ -139,7 +170,7 @@ impl RecordValue {
                 })
             }
             7 => {
-                let bytes = &buf[..8];
+                let bytes = &buf[..size];
                 let value = RecordType::F64(f64::from_be_bytes(bytes.try_into()?));
                 Ok(Self {
                     bytes: Some(bytes.to_vec()),
@@ -163,9 +194,10 @@ impl RecordValue {
                 bytes: None,
             }),
             n if n >= 12 && n % 2 == 0 => {
-                let size = ((n - 12) / 2) as usize;
-                if size > 0 {
-                    let bytes = buf[..size].to_vec();
+                // Data might be spilled into overflow pages.
+                let max_size = size.min(buf.len());
+                if max_size > 0 {
+                    let bytes = buf[..max_size].to_vec();
                     let value = RecordType::Blob(Some(bytes.clone()));
                     Ok(Self {
                         bytes: Some(bytes),
@@ -177,9 +209,10 @@ impl RecordValue {
                 }
             }
             n if n >= 13 && n % 2 != 0 => {
-                let size = ((n - 13) / 2) as usize;
-                if size > 0 {
-                    let bytes = &buf[..size].to_vec();
+                // Data might be spilled into overflow pages.
+                let max_size = size.min(buf.len());
+                if max_size > 0 {
+                    let bytes = &buf[..max_size].to_vec();
                     let value = match text_encoding {
                         TextEncoding::UTF8 => {
                             RecordType::Text(Some(std::str::from_utf8(bytes)?.to_string()))

@@ -1,4 +1,4 @@
-use crate::{DBHeader, Page, Result, StdError};
+use crate::{DBHeader, OverflowPage, OverflowUnit, Page, Result, StdError};
 use std::rc::Rc;
 
 pub const DB_HEADER_SIZE: usize = 100;
@@ -27,15 +27,22 @@ impl Reader {
         Ok(Self { bytes, db_header })
     }
 
-    /// Get fully parsed Page.
-    pub fn get_page(&self, page_num: usize) -> Result<Page> {
-        self.validate_page_bounds(page_num)?;
+    /// Get fully parsed Btree Page.
+    pub fn get_btree_page(&self, page_num: usize) -> Result<Page> {
+        let buf = self.page_slice(page_num)?;
+        let page = Page::try_from((self.db_header.clone(), page_num, buf.as_slice()))?;
+        Ok(page)
+    }
 
-        let page_offset = self.page_offset(page_num);
-        let page_size = self.db_header.page_size as usize;
-        let mut b_page = vec![0; page_size];
-        b_page.clone_from_slice(&self.bytes[page_offset..page_offset + page_size]);
-        let page = Page::try_from((self.db_header.clone(), page_num, b_page.as_slice()))?;
+    /// Get fully parsed Overflow Page.
+    pub fn get_overflow_page(
+        &self,
+        overflow: Vec<OverflowUnit>,
+        page_num: usize,
+    ) -> Result<OverflowPage> {
+        let buf = self.page_slice(page_num)?;
+        let page =
+            OverflowPage::try_from((self.db_header.text_encoding, overflow, buf.as_slice()))?;
         Ok(page)
     }
 
@@ -54,6 +61,15 @@ impl Reader {
         } else {
             self.bytes.len() / self.db_header.page_size as usize
         }
+    }
+
+    fn page_slice(&self, page_num: usize) -> Result<Vec<u8>, StdError> {
+        self.validate_page_bounds(page_num)?;
+        let page_offset = self.page_offset(page_num);
+        let page_size = self.db_header.page_size as usize;
+        let mut b_page = vec![0; page_size];
+        b_page.clone_from_slice(&self.bytes[page_offset..page_offset + page_size]);
+        Ok(b_page)
     }
 
     fn validate_page_bounds(&self, page_num: usize) -> Result<()> {
