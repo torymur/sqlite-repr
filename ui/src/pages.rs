@@ -3,23 +3,35 @@ use std::rc::Rc;
 use parser::*;
 
 use crate::header::DBHeaderPart;
-use crate::{Field, Part, Value};
+use crate::{Field, PageView, Part, Value};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PageView {
+pub struct BtreePageElement {
     pub id: usize,
     pub page: Rc<Page>,
+    pub size: usize,
 }
 
-impl PageView {
-    pub fn new(page: Page) -> Self {
+impl BtreePageElement {
+    pub fn new(page: Page, size: usize) -> Self {
         Self {
             id: page.id,
             page: Rc::new(page),
+            size,
         }
     }
+}
 
-    pub fn label(&self) -> String {
+impl PageView for BtreePageElement {
+    fn id(&self) -> usize {
+        self.id
+    }
+
+    fn size(&self) -> usize {
+        self.size
+    }
+
+    fn label(&self) -> String {
         if self.id == 1 {
             format!("Root {}", self.page.page_header.page_type)
         } else {
@@ -27,7 +39,7 @@ impl PageView {
         }
     }
 
-    pub fn desc(&self) -> &'static str {
+    fn desc(&self) -> &'static str {
         if self.id == 1 {
             "The 100-byte database file header is found only on Page 1, meaning that root page has 100 fewer bytes of storage space available. It's always a table b-tree page: interior or leaf. Page 1 is the root page of a table b-tree, that holds a special table named 'sqlite_schema'. This b-tree is known as the 'schema table' since it stores the complete database schema."
         } else {
@@ -35,7 +47,7 @@ impl PageView {
         }
     }
 
-    pub fn parts(&self) -> Vec<Rc<dyn Part>> {
+    fn parts(&self) -> Vec<Rc<dyn Part>> {
         let mut parts: Vec<Rc<dyn Part>> = vec![
             Rc::new(PageHeaderPart::new(self.page.clone())),
             Rc::new(CellPointerPart::new(self.page.clone())),
@@ -288,11 +300,7 @@ impl Part for CellPart {
             ),
         ];
 
-        let payload = match &self.cell.payload {
-            Some(payload) => payload,
-            None => return fields,
-        };
-
+        let payload = &self.cell.payload;
         let payload_offset = rowid_offset + self.cell.rowid_varint.bytes.len();
         let record_header_style = "bg-slate-330";
         fields.push(
@@ -333,6 +341,16 @@ impl Part for CellPart {
                 style,
             ));
             offset += size;
+        }
+
+        if let Some(overflow) = &self.cell.overflow {
+            fields.push(Field::new(
+                "Cell Payload: Page Overflow. When the payload of a b-tree cell is too large for the b-tree page, the surplus is spilled onto overflow pages. Overflow pages form a linked list. The first four bytes of each overflow page are a big-endian integer which is the page number of the next page in the chain, or zero for the final page in the chain. The fifth byte through the last usable byte are used to hold overflow content.",
+                offset,
+                4,
+                Value::U32(overflow.page),
+                "bg-slate-390",
+            ));
         }
 
         fields

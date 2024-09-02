@@ -3,6 +3,7 @@
 
 pub mod header;
 pub mod index;
+pub mod overflow_pages;
 pub mod pages;
 pub mod state;
 pub mod viewer;
@@ -11,6 +12,14 @@ use core::fmt;
 use std::rc::Rc;
 
 use parser::*;
+
+pub trait PageView: std::fmt::Debug {
+    fn id(&self) -> usize;
+    fn size(&self) -> usize;
+    fn label(&self) -> String;
+    fn desc(&self) -> &'static str;
+    fn parts(&self) -> Vec<Rc<dyn Part>>;
+}
 
 pub trait Part: std::fmt::Debug {
     fn label(&self) -> String;
