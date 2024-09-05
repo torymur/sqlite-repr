@@ -31,7 +31,7 @@ impl PageView for OverflowPageElement {
     }
 
     fn label(&self) -> String {
-        "Overflow Page".to_string()
+        "ᨒ  Overflow".to_string()
     }
 
     fn desc(&self) -> &'static str {

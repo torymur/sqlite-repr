@@ -16,7 +16,8 @@ included/overflow_page:
 		'create table mixed_overflow(text,longint,int,blob)' \
 		'create table blob_overflow(blob)' \
 		'insert into blob_overflow values(fileio_read("dev/overflow.txt"))' \
-		'insert into mixed_overflow select cast(blob as TEXT), 234234235, 0, blob from blob_overflow'
+		'insert into mixed_overflow select cast(blob as TEXT), 234234235, 0, blob from blob_overflow' \
+		'insert into mixed_overflow select cast(blob as TEXT), 94542343, 1, blob from blob_overflow'
 
 included/big_page:
 	sqlite3 $@ \

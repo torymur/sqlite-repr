@@ -32,11 +32,7 @@ impl PageView for BtreePageElement {
     }
 
     fn label(&self) -> String {
-        if self.id == 1 {
-            format!("Root {}", self.page.page_header.page_type)
-        } else {
-            format!("{}", self.page.page_header.page_type)
-        }
+        format!("ꕤ  {}", self.page.page_header.page_type)
     }
 
     fn desc(&self) -> &'static str {

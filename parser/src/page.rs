@@ -37,10 +37,10 @@ impl TryFrom<u8> for PageHeaderType {
 impl std::fmt::Display for PageHeaderType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::InteriorIndex => write!(f, "Interior Index Page"),
-            Self::InteriorTable => write!(f, "Interior Table Page"),
-            Self::LeafIndex => write!(f, "Leaf Index Page"),
-            Self::LeafTable => write!(f, "Leaf Table Page"),
+            Self::InteriorIndex => write!(f, "Interior Index"),
+            Self::InteriorTable => write!(f, "Interior Table"),
+            Self::LeafIndex => write!(f, "Leaf Index"),
+            Self::LeafTable => write!(f, "Leaf Table"),
         }
     }
 }
