@@ -18,7 +18,7 @@ impl TryFrom<(TextEncoding, &[u8])> for Record {
     fn try_from(value: (TextEncoding, &[u8])) -> Result<Self, Self::Error> {
         let (text_encoding, buf) = value;
 
-        // Record header usually accessable without consulting an overflow page.
+        // Record header usually accessible without consulting an overflow page.
         // TODO: an example, which will cover for header spillover.
         let header = RecordHeader::try_from(buf)?;
 
@@ -27,8 +27,14 @@ impl TryFrom<(TextEncoding, &[u8])> for Record {
         for datatype in &header.datatypes {
             let bytes = &buf[offset..];
             if bytes.is_empty() {
-                // End of the page, means there is an payload overflow.
-                break;
+                // End of the page, which means one of these:
+                // 1. There is a payload overflow
+                // 2. Zero sized value, located at the end of the page
+                // We would like to parse zero-sized still.
+
+                if RecordCode::size(datatype.value) != 0 {
+                    break;
+                }
             }
 
             let value = RecordValue::new(datatype.value, text_encoding, bytes)?;
