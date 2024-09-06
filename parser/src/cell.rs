@@ -7,20 +7,26 @@
 use crate::{slc, OverflowUnit, Record, RecordCode, StdError, TextEncoding, Varint};
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Cell {
+    TableLeaf(TableLeafCell),
+    TableInterior(TableInteriorCell),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct CellOverflow {
     pub page: u32,
     pub units: Vec<OverflowUnit>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Cell {
+pub struct TableLeafCell {
     pub payload_varint: Varint,
     pub rowid_varint: Varint,
     pub payload: Record,
     pub overflow: Option<CellOverflow>,
 }
 
-impl TryFrom<(TextEncoding, u64, u8, &[u8])> for Cell {
+impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
     type Error = StdError;
 
     fn try_from(value: (TextEncoding, u64, u8, &[u8])) -> Result<Self, Self::Error> {
@@ -87,7 +93,7 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for Cell {
 
         // -- Cell might have overflows.
         if overflow_size == 0 {
-            return Ok(Cell {
+            return Ok(Self {
                 payload_varint,
                 rowid_varint,
                 payload,
@@ -123,11 +129,28 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for Cell {
             units: overflow_units,
         });
 
-        Ok(Cell {
+        Ok(Self {
             payload_varint,
             rowid_varint,
             payload,
             overflow,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableInteriorCell {
+    pub left_page_number: u32,
+    pub rowid_varint: Varint,
+}
+
+impl TryFrom<&[u8]> for TableInteriorCell {
+    type Error = StdError;
+
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Self {
+            left_page_number: slc!(buf, 0, 4, u32),
+            rowid_varint: Varint::new(&buf[4..]),
         })
     }
 }

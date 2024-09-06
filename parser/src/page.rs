@@ -1,5 +1,8 @@
 /// BTree Page exploration
-use crate::{slc, Cell, DBHeader, Result, StdError, DB_HEADER_SIZE};
+use crate::{
+    cell::{TableInteriorCell, TableLeafCell},
+    slc, Cell, DBHeader, Result, StdError, DB_HEADER_SIZE,
+};
 use std::rc::Rc;
 
 const PAGE_HEADER_SIZE: usize = 12;
@@ -215,16 +218,24 @@ impl TryFrom<(Rc<DBHeader>, usize, &[u8])> for Page {
             .map(|b| u8::from_be_bytes([*b; 1]))
             .collect::<Vec<u8>>();
 
-        // -- Parse cells [only Leaf Table Page for now]
+        // -- Parse cells.
         let mut cells: Vec<Cell> = vec![];
         for ptr in &cell_pointer.array {
-            let params = (
-                db_header.text_encoding,
-                db_header.page_size,
-                db_header.reserved_page_space,
-                &buf[*ptr as usize..],
-            );
-            let cell = Cell::try_from(params)?;
+            let cell = match page_header.page_type {
+                PageHeaderType::LeafTable => {
+                    let params = (
+                        db_header.text_encoding,
+                        db_header.page_size,
+                        db_header.reserved_page_space,
+                        &buf[*ptr as usize..],
+                    );
+                    Cell::TableLeaf(TableLeafCell::try_from(params)?)
+                }
+                PageHeaderType::InteriorTable => {
+                    Cell::TableInterior(TableInteriorCell::try_from(&buf[*ptr as usize..])?)
+                }
+                _ => unreachable!("Cell isn't yet implemented for this type."),
+            };
             cells.push(cell)
         }
 
