@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use parser::cell::{TableInteriorCell, TableLeafCell};
 use parser::*;
 
 use crate::header::DBHeaderPart;
@@ -32,7 +33,12 @@ impl PageView for BtreePageElement {
     }
 
     fn label(&self) -> String {
-        format!("ꕤ  {}", self.page.page_header.page_type)
+        let sign = match self.page.page_header.page_type {
+            PageHeaderType::LeafTable => "ꕤ ",
+            PageHeaderType::InteriorTable => "☰ ",
+            _ => "",
+        };
+        format!("{} {}", sign, self.page.page_header.page_type)
     }
 
     fn desc(&self) -> &'static str {
@@ -259,45 +265,29 @@ pub struct CellPart {
     pub offset: usize,
 }
 
-impl Part for CellPart {
-    fn label(&self) -> String {
-        format!("Cell Content {}", self.id)
-    }
-
-    fn desc(&self) -> &'static str {
-        "The format of a cell depends on which kind of b-tree page the cell appears on. Cell elements like number of bytes of payload and rowid are encoded by a variable-length integer or 'varint', which is a static Huffman encoding of 64-bit twos-complement integers, that uses less space for small positive values."
-    }
-
-    fn color(&self) -> String {
-        if self.id % 2 == 0 {
-            "green".to_string()
-        } else {
-            "orange".to_string()
-        }
-    }
-
-    fn fields(&self) -> Vec<Field> {
-        let rowid_offset = self.offset + self.cell.payload_varint.bytes.len();
+impl CellPart {
+    fn table_leaf_fields(&self, cell: &TableLeafCell) -> Vec<Field> {
+        let rowid_offset = self.offset + cell.payload_varint.bytes.len();
         let cell_header_style = "bg-slate-300";
         let mut fields = vec![
             Field::new(
                 "Cell Header. A varint, which is the total number of bytes of payload, including any overflow.",
                 self.offset,
-                self.cell.payload_varint.bytes.len(),
-                Value::Varint(self.cell.payload_varint.clone()),
+                cell.payload_varint.bytes.len(),
+                Value::Varint(cell.payload_varint.clone()),
                 cell_header_style,
             ),
             Field::new(
                 "Cell Header. A varint which is the integer key, a.k.a. 'rowid'.",
                 rowid_offset,
-                self.cell.rowid_varint.bytes.len(),
-                Value::Varint(self.cell.rowid_varint.clone()),
+                cell.rowid_varint.bytes.len(),
+                Value::Varint(cell.rowid_varint.clone()),
                 cell_header_style,
             ),
         ];
 
-        let payload = &self.cell.payload;
-        let payload_offset = rowid_offset + self.cell.rowid_varint.bytes.len();
+        let payload = &cell.payload;
+        let payload_offset = rowid_offset + cell.rowid_varint.bytes.len();
         let record_header_style = "bg-slate-330";
         fields.push(
             Field::new(
@@ -339,7 +329,7 @@ impl Part for CellPart {
             offset += size;
         }
 
-        if let Some(overflow) = &self.cell.overflow {
+        if let Some(overflow) = &cell.overflow {
             fields.push(Field::new(
                 "Cell Payload: Page Overflow. When the payload of a b-tree cell is too large for the b-tree page, the surplus is spilled onto overflow pages. Overflow pages form a linked list. The first four bytes of each overflow page are a big-endian integer which is the page number of the next page in the chain, or zero for the final page in the chain. The fifth byte through the last usable byte are used to hold overflow content.",
                 offset,
@@ -350,5 +340,50 @@ impl Part for CellPart {
         }
 
         fields
+    }
+
+    fn table_interior_fields(&self, cell: &TableInteriorCell) -> Vec<Field> {
+        let cell_header_style = "bg-slate-300";
+        vec![
+            Field::new(
+                "Page number of the left child.",
+                self.offset,
+                4,
+                Value::U32(cell.left_page_number),
+                cell_header_style,
+            ),
+            Field::new(
+                "A varint which is the integer key, a.k.a. 'rowid'.",
+                4,
+                cell.rowid_varint.bytes.len(),
+                Value::Varint(cell.rowid_varint.clone()),
+                cell_header_style,
+            ),
+        ]
+    }
+}
+
+impl Part for CellPart {
+    fn label(&self) -> String {
+        format!("Cell Content {}", self.id)
+    }
+
+    fn desc(&self) -> &'static str {
+        "The format of a cell depends on which kind of b-tree page the cell appears on. Cell elements like number of bytes of payload and rowid are encoded by a variable-length integer or 'varint', which is a static Huffman encoding of 64-bit twos-complement integers, that uses less space for small positive values."
+    }
+
+    fn color(&self) -> String {
+        if self.id % 2 == 0 {
+            "green".to_string()
+        } else {
+            "orange".to_string()
+        }
+    }
+
+    fn fields(&self) -> Vec<Field> {
+        match &self.cell {
+            Cell::TableLeaf(c) => self.table_leaf_fields(c),
+            Cell::TableInterior(c) => self.table_interior_fields(c),
+        }
     }
 }

@@ -72,14 +72,26 @@ impl Field {
 
     pub fn trim_hex(&self, limit: usize) -> String {
         match &self.value {
-            Value::Unallocated(v) => format!("{} ...", Self::pretty_hex(&v[..limit])),
+            Value::Unallocated(v) => {
+                if limit.min(v.len()) == limit {
+                    format!("{} ...", Self::pretty_hex(&v[..limit]))
+                } else {
+                    self.to_hex()
+                }
+            }
             _ => self.to_hex(),
         }
     }
 
     pub fn trim_str(&self, limit: usize) -> String {
         match &self.value {
-            Value::Unallocated(v) => format!("{:?} ...", &v[..limit]),
+            Value::Unallocated(v) => {
+                if limit.min(v.len()) == limit {
+                    format!("{:?} ...", &v[..limit])
+                } else {
+                    format!("{:?}", v)
+                }
+            }
             v => format!("{v}"),
         }
     }
