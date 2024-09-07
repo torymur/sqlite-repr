@@ -81,7 +81,7 @@ impl Part for NextPagePart {
             "Value is the next overflow page in a linked list.",
             0,
             4,
-            Value::U32(self.next_page),
+            Value::PageNumber(self.next_page),
             "",
         )]
     }

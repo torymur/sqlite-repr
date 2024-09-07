@@ -6,7 +6,6 @@ use dioxus::prelude::*;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
-
 use crate::{Field, Value};
 
 #[component]
@@ -55,7 +54,7 @@ pub fn Header() -> Element {
                         *current_db.write() = e.value().to_string();
                         // preloaded databases shouldn't fail
                         let new_viewer = Viewer::new_from_included(e.value().as_str()).expect("Viewer failed");
-                        let first_page = new_viewer.first_page();
+                        let first_page = new_viewer.get_page(1);
                         *selected_page.write() = first_page;
                         *selected_part.write() = None;
                         *selected_field.write() = None;
@@ -237,8 +236,9 @@ pub fn Description() -> Element {
 }
 
 pub fn Visual() -> Element {
-    let selected_page = use_context::<AppState>().selected_page;
+    let mut selected_page = use_context::<AppState>().selected_page;
     let parts = selected_page().parts();
+    let viewer = use_context::<AppState>().viewer;
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut formatting = use_context::<AppState>().format;
@@ -294,7 +294,13 @@ pub fn Visual() -> Element {
                                 }
                             },
                             onclick: move |_| {
-                                if let Value::Unallocated(_) = field.value { *trimmed.write() = !trimmed()}
+                                if let Value::Unallocated(_) = field.value {
+                                    *trimmed.write() = !trimmed()
+                                };
+                                if let Ok(n) = field.try_page_number() {
+                                    *selected_page.write() = viewer.read().get_page(n);
+
+                                };
                             },
                             FormattedValue {field: field.clone(), trimmed: trimmed()}
                         }

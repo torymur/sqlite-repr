@@ -32,7 +32,7 @@ impl AppState {
 
         AppState {
             current_db: Signal::new(SIMPLE_DB.to_string()),
-            selected_page: Signal::new(viewer.first_page()),
+            selected_page: Signal::new(viewer.get_page(1)),
             selected_part: Signal::new(None),
             selected_field: Signal::new(None),
             format: Signal::new(Format::Hybrid),

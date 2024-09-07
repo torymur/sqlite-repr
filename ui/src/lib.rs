@@ -59,6 +59,7 @@ impl Field {
             },
             Value::Unallocated(v) => Self::pretty_hex(v),
             Value::Varint(v) => Self::pretty_hex(&v.bytes),
+            Value::PageNumber(v) => Self::pretty_hex(&v.to_be_bytes()),
             Value::Record(record) => match record.value {
                 RecordType::Null
                 | RecordType::Zero(_)
@@ -67,6 +68,13 @@ impl Field {
                 | RecordType::Text(None) => "─".to_string(),
                 _ => Self::pretty_hex(record.bytes.as_ref().map_or(&[], |b| b)),
             },
+        }
+    }
+
+    pub fn try_page_number(&self) -> Result<u32, StdError> {
+        match &self.value {
+            Value::PageNumber(v) if *v != 0 => Ok(*v),
+            _ => Err("Page number cannot be made from this Value.".into()),
         }
     }
 
@@ -121,6 +129,7 @@ pub enum Value {
     Unallocated(Box<[u8]>),
     Varint(Varint),
     Record(RecordValue),
+    PageNumber(u32),
 }
 
 impl fmt::Display for Value {
@@ -151,6 +160,7 @@ impl fmt::Display for Value {
             Self::CellStartOffset(v) => write!(f, "{v}"),
             Self::Unallocated(v) => write!(f, "{:?}", *v),
             Self::Varint(v) => write!(f, "{}", v.value),
+            Self::PageNumber(v) => write!(f, "{v}"),
             Value::Record(record) => match &record.value {
                 RecordType::Null => write!(f, "Null"),
                 RecordType::Zero(v) | RecordType::One(v) => write!(f, "Integer {v}"),

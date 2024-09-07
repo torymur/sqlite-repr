@@ -86,9 +86,11 @@ impl Viewer {
         self.included_db.keys().map(|k| k.to_string()).collect()
     }
 
-    pub fn first_page(&self) -> Rc<dyn PageView> {
-        // Having at least one part is guaranteed by `new_from_...` construct
-        self.pages[0].clone()
+    pub fn get_page(&self, id: u32) -> Rc<dyn PageView> {
+        self.pages
+            .get(id as usize - 1)
+            .expect("Page is outside of Viewer range.")
+            .clone()
     }
 
     fn load_overflow_page(
