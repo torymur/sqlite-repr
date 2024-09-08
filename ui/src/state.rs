@@ -14,6 +14,7 @@ pub struct AppState {
     pub selected_page: Signal<Rc<dyn PageView>>,
     pub selected_field: Signal<Option<Field>>,
     pub selected_part: Signal<Option<Rc<dyn Part>>>,
+    pub locked_field: Signal<Option<(usize, usize)>>,
     pub format: Signal<Format>,
 }
 
@@ -35,6 +36,7 @@ impl AppState {
             selected_page: Signal::new(viewer.get_page(1)),
             selected_part: Signal::new(None),
             selected_field: Signal::new(None),
+            locked_field: Signal::new(None),
             format: Signal::new(Format::Hybrid),
             viewer: Signal::new(viewer),
         }

@@ -8,6 +8,7 @@ module.exports = {
     "pattern-white",
     "pattern-size-1",
     "pattern-bg-slate-200",
+    "locked",
     {
         pattern: /(bg|text|border)-(orange|green|slate)-(600|700|800)/,
     },

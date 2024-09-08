@@ -48,4 +48,4 @@ clean:
 
 .PHONY: mini
 mini: 
-	npx tailwindcss -o assets/tailwind.css --minify
+	npx tailwindcss -i ./input.css -o assets/tailwind.css --minify

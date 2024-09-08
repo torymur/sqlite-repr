@@ -1,5 +1,4 @@
 //! Main UI page.
-
 #![allow(non_snake_case)]
 
 use dioxus::prelude::*;
@@ -22,6 +21,7 @@ pub fn Header() -> Element {
     let mut selected_page = use_context::<AppState>().selected_page;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
+    let mut locked_field = use_context::<AppState>().locked_field;
 
     rsx! {
         div {
@@ -58,6 +58,7 @@ pub fn Header() -> Element {
                         *selected_page.write() = first_page;
                         *selected_part.write() = None;
                         *selected_field.write() = None;
+                        *locked_field.write() = None;
                         *viewer.write() = new_viewer;
                     },
                     for name in viewer.read().included_dbnames() {
@@ -107,10 +108,11 @@ pub fn SideBar() -> Element {
     let mut selected_page = use_context::<AppState>().selected_page;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
+    let mut locked_field = use_context::<AppState>().locked_field;
 
     rsx! {
         div {
-            class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit",
+            class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit overflow-y-auto",
             div {
                 class: "text-lg font-bold truncate pb-4",
                 "🗐  Pages",
@@ -132,6 +134,7 @@ pub fn SideBar() -> Element {
                                 *selected_page.write() = page.clone();
                                 *selected_part.write() = None;
                                 *selected_field.write() = None;
+                                *locked_field.write() = None;
                             },
                             "Page {n+1}",
                             br {}
@@ -236,13 +239,9 @@ pub fn Description() -> Element {
 }
 
 pub fn Visual() -> Element {
-    let mut selected_page = use_context::<AppState>().selected_page;
+    let selected_page = use_context::<AppState>().selected_page;
     let parts = selected_page().parts();
-    let viewer = use_context::<AppState>().viewer;
-    let mut selected_field = use_context::<AppState>().selected_field;
-    let mut selected_part = use_context::<AppState>().selected_part;
     let mut formatting = use_context::<AppState>().format;
-    let mut trimmed = use_signal(|| true);
     rsx! {
         div {
             class: "flex items-center bg-secondary",
@@ -274,38 +273,70 @@ pub fn Visual() -> Element {
         }
         div {
             class: "flex flex-wrap p-4 text-xs",
-            for part in parts {
-                for field in part.fields() {
-                    div {
-                        div {
-                            class: "mb-0 mt-1 pr-2 leading-tight tracking-tighter font-medium text-{part.color()}-800",
-                            "{field.offset}",
-                        }
-                        div {
-                            class: "p-1 outline outline-1 outline-secondary bg-slate-200 hover:bg-secondary border-t-4 border-{part.color()}-800",
-                            class: "{field.style}",
-                            onmouseover:
-                            {
-                                let part = part.clone();
-                                let field = field.clone();
-                                move |_| {
-                                    *selected_field.write() = Some(field.clone());
-                                    *selected_part.write() = Some(part.clone());
-                                }
-                            },
-                            onclick: move |_| {
-                                if let Value::Unallocated(_) = field.value {
-                                    *trimmed.write() = !trimmed()
-                                };
-                                if let Ok(n) = field.try_page_number() {
-                                    *selected_page.write() = viewer.read().get_page(n);
+            for (p, part) in parts.iter().enumerate() {
+                for (f, _) in part.fields().iter().enumerate() {
+                    FieldElement {nf: f, np: p}
+                }
+            }
+        }
+    }
+}
 
-                                };
-                            },
-                            FormattedValue {field: field.clone(), trimmed: trimmed()}
+#[component]
+pub fn FieldElement(nf: usize, np: usize) -> Element {
+    let mut selected_page = use_context::<AppState>().selected_page;
+    let part = &selected_page().parts()[np];
+    let field = &part.fields()[nf];
+
+    let viewer = use_context::<AppState>().viewer;
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut trimmed = use_signal(|| true);
+    let mut locked = use_context::<AppState>().locked_field;
+    rsx! {
+        div {
+            div {
+                class: "mb-0 mt-1 pr-2 leading-tight tracking-tighter font-medium text-{part.color()}-800",
+                "{field.offset}",
+            }
+            div {
+                class: "p-1 outline outline-1 outline-secondary hover:bg-secondary border-t-4 border-{part.color()}-800 bg-slate-200",
+                class: "{field.style}",
+                class: if locked() == Some((np, nf)) {"locked"},
+                onmouseover: {
+                    let part = part.clone();
+                    let field = field.clone();
+                    move |_| {
+                        if locked().is_some() {return}
+
+                        *selected_field.write() = Some(field.clone());
+                        *selected_part.write() = Some(part.clone());
+                    }
+                },
+                onclick: {
+                    let part = part.clone();
+                    let field = field.clone();
+                    move |_| {
+                        if let Ok(n) = field.try_page_number() {
+                            *selected_page.write() = viewer.read().get_page(n);
+                            return;
+                        };
+
+                        if let Value::Unallocated(_) = field.value {
+                            *trimmed.write() = !trimmed();
+                            return;
+                        };
+
+                        if locked().is_none() || locked() != Some((np, nf)) {
+                            *locked.write() = Some((np, nf));
+                            *selected_field.write() = Some(field.clone());
+                            *selected_part.write() = Some(part.clone());
+                        } else {
+                            *locked.write() = None;
                         }
                     }
-                }
+                },
+                FormattedValue {field: field.clone(), trimmed: trimmed()}
             }
         }
     }

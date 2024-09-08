@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .locked {
+    background-color: #c4aaa0;
+  }
+}
