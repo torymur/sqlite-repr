@@ -18,13 +18,13 @@ pub trait PageView: std::fmt::Debug {
     fn size(&self) -> usize;
     fn label(&self) -> String;
     fn desc(&self) -> &'static str;
-    fn parts(&self) -> Vec<Rc<dyn Part>>;
+    fn parts(&self) -> &[Rc<dyn Part>];
 }
 
 pub trait Part: std::fmt::Debug {
     fn label(&self) -> String;
     fn desc(&self) -> &'static str;
-    fn fields(&self) -> Vec<Field>;
+    fn fields(&self) -> &[Rc<Field>];
     fn color(&self) -> String;
 }
 

@@ -12,7 +12,7 @@ pub struct AppState {
     pub current_db: Signal<String>,
     pub viewer: Signal<Viewer>,
     pub selected_page: Signal<Rc<dyn PageView>>,
-    pub selected_field: Signal<Option<Field>>,
+    pub selected_field: Signal<Option<Rc<Field>>>,
     pub selected_part: Signal<Option<Rc<dyn Part>>>,
     pub locked_field: Signal<Option<(usize, usize)>>,
     pub format: Signal<Format>,

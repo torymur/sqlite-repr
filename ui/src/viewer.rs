@@ -6,8 +6,8 @@ use std::rc::Rc;
 
 use parser::{Cell, OverflowPage, Reader, StdError};
 
-use crate::overflow_pages::OverflowPageElement;
-use crate::pages::BtreePageElement;
+use crate::overflow_pages::OverflowPageElementBuilder;
+use crate::pages::BtreePageElementBuilder;
 use crate::PageView;
 
 #[derive(Debug)]
@@ -75,7 +75,7 @@ impl Viewer {
                     }
                 };
             }
-            pages_map.insert(n, Rc::new(BtreePageElement::new(page, size)));
+            pages_map.insert(n, Rc::new(BtreePageElementBuilder::new(page, size).build()));
         }
 
         let pages: Vec<Rc<dyn PageView>> = pages_map.into_values().collect();
@@ -102,7 +102,7 @@ impl Viewer {
         let page_size = reader.db_header.page_size as usize;
         pages.insert(
             page_num,
-            Rc::new(OverflowPageElement::new(page.clone(), page_size, page_num)),
+            Rc::new(OverflowPageElementBuilder::new(page.clone(), page_size, page_num).build()),
         );
         match page.next_page {
             0 => Ok(()),

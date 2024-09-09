@@ -1,17 +1,101 @@
 //! Main UI page.
 #![allow(non_snake_case)]
 
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
 use crate::{Field, Value};
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum NavMove {
+    Left,
+    Right,
+}
+
+fn move_to(direction: NavMove, nf: usize, np: usize) {
+    let selected_page = use_context::<AppState>().selected_page;
+    let page = selected_page();
+    let parts = page.parts();
+
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut locked_field = use_context::<AppState>().locked_field;
+
+    let (next_nf, next_np) = match direction {
+        NavMove::Left => {
+            if nf > 0 {
+                (nf - 1, np)
+            } else if np > 0 {
+                let next_np = np - 1;
+                let next_nf = &parts[next_np].fields().len() - 1;
+                (next_nf, next_np)
+            } else {
+                // No left - left.
+                (nf, np)
+            }
+        }
+        NavMove::Right => {
+            let limit = parts[np].fields().len() - 1;
+            if nf < limit {
+                (nf + 1, np)
+            } else if np < &parts.len() - 1 {
+                (0, np + 1)
+            } else {
+                // No right - left.
+                (nf, np)
+            }
+        }
+    };
+
+    let part = &parts[next_np];
+    let field = &parts[next_np].fields()[next_nf];
+
+    *locked_field.write() = Some((next_np, next_nf));
+    *selected_field.write() = Some(field.clone());
+    *selected_part.write() = Some(part.clone());
+}
+
+fn try_jump(nf: usize, np: usize) {
+    let viewer = use_context::<AppState>().viewer;
+    let mut selected_page = use_context::<AppState>().selected_page;
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut locked_field = use_context::<AppState>().locked_field;
+
+    let page = &selected_page();
+    let field = &page.parts()[np].fields()[nf];
+    if let Ok(n) = field.try_page_number() {
+        *selected_page.write() = viewer.read().get_page(n);
+        *locked_field.write() = None;
+        *selected_field.write() = None;
+        *selected_part.write() = None;
+    }
+}
+
 #[component]
 pub fn Home(route: Vec<String>) -> Element {
+    let locked_field = use_context::<AppState>().locked_field;
     rsx! {
-        Header { }
-        Body { }
+        div {
+            class: "focus:outline-none",
+            // Allows to have a focus on div, which is necessary to catch keyboard events.
+            tabindex: 0,
+            onkeydown: move |e| {
+                if let Some((np, nf)) = locked_field() {
+                    match e.key() {
+                        Key::ArrowLeft => move_to(NavMove::Left, nf, np),
+                        Key::ArrowRight => move_to(NavMove::Right, nf, np),
+                        Key::Enter => try_jump(nf, np),
+                        _ => ()
+                    }
+                }
+            },
+            Header { }
+            Body { }
+        }
     }
 }
 
@@ -22,7 +106,6 @@ pub fn Header() -> Element {
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut locked_field = use_context::<AppState>().locked_field;
-
     rsx! {
         div {
             class: "h-12 flex items-center bg-slate-200",
@@ -49,7 +132,7 @@ pub fn Header() -> Element {
                     "Example database"
                 }
                 select {
-                    class: "join-item select select-secondary select-bordered font-bold tracking-tighter",
+                    class: "join-item select select-secondary select-bordered font-bold tracking-tighter focus:outline-none",
                     oninput: move |e| {
                         *current_db.write() = e.value().to_string();
                         // preloaded databases shouldn't fail
@@ -109,7 +192,6 @@ pub fn SideBar() -> Element {
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut locked_field = use_context::<AppState>().locked_field;
-
     rsx! {
         div {
             class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit overflow-y-auto",
@@ -124,8 +206,7 @@ pub fn SideBar() -> Element {
                         div { class: "flex-grow" }
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
-                            // page offset
-                            "{&page.size() * n}",
+                            "{&page.size() * n}", // page offset
                         }
                         button {
                             class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
@@ -171,10 +252,7 @@ pub fn Description() -> Element {
                     div {
                         "{selected_page().desc()}"
                     }
-                    div {
-                        class: "text-lg text-center divider",
-                        "{part_label}"
-                    }
+                    FieldNavigation { title: part_label }
                     div {
                         class: "text-xs",
                         "{part_desc}"
@@ -238,9 +316,53 @@ pub fn Description() -> Element {
     }
 }
 
+#[component]
+pub fn FieldNavigation(title: String) -> Element {
+    let locked_field = use_context::<AppState>().locked_field;
+    match locked_field() {
+        None => {
+            rsx! {
+                div {
+                    class: "divider items-center",
+                    div {
+                        class: "text-lg text-center",
+                        "{title}"
+                    }
+                }
+            }
+        }
+        Some((np, nf)) => {
+            rsx! {
+                div {
+                    class: "divider items-center",
+                    button {
+                        class: "btn btn-sm",
+                        onclick: {
+                            move |_| move_to(NavMove::Left, nf, np)
+                        },
+                        "⇦ "
+                    }
+                    div {
+                        class: "text-lg text-center self-center",
+                        "{title}"
+                    }
+                    button {
+                        class: "btn btn-sm",
+                        onclick: {
+                            move |_| move_to(NavMove::Right, nf, np)
+                        },
+                        "⇨ "
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn Visual() -> Element {
     let selected_page = use_context::<AppState>().selected_page;
-    let parts = selected_page().parts();
+    let page = selected_page();
+    let parts = page.parts();
     let mut formatting = use_context::<AppState>().format;
     rsx! {
         div {
@@ -284,15 +406,14 @@ pub fn Visual() -> Element {
 
 #[component]
 pub fn FieldElement(nf: usize, np: usize) -> Element {
-    let mut selected_page = use_context::<AppState>().selected_page;
-    let part = &selected_page().parts()[np];
-    let field = &part.fields()[nf];
-
-    let viewer = use_context::<AppState>().viewer;
+    let selected_page = use_context::<AppState>().selected_page;
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut trimmed = use_signal(|| true);
     let mut locked = use_context::<AppState>().locked_field;
+
+    let part = &selected_page().parts()[np].clone();
+    let field = &part.fields()[nf];
     rsx! {
         div {
             div {
@@ -309,6 +430,7 @@ pub fn FieldElement(nf: usize, np: usize) -> Element {
                     move |_| {
                         if locked().is_some() {return}
 
+                        // If field is not locked we want it to move freely.
                         *selected_field.write() = Some(field.clone());
                         *selected_part.write() = Some(part.clone());
                     }
@@ -317,8 +439,8 @@ pub fn FieldElement(nf: usize, np: usize) -> Element {
                     let part = part.clone();
                     let field = field.clone();
                     move |_| {
-                        if let Ok(n) = field.try_page_number() {
-                            *selected_page.write() = viewer.read().get_page(n);
+                        if field.try_page_number().is_ok() {
+                            try_jump(nf, np);
                             return;
                         };
 
@@ -343,7 +465,7 @@ pub fn FieldElement(nf: usize, np: usize) -> Element {
 }
 
 #[component]
-pub fn FormattedValue(field: Field, trimmed: bool) -> Element {
+pub fn FormattedValue(field: Rc<Field>, trimmed: bool) -> Element {
     let formatting = use_context::<AppState>().format;
     let limit: usize = 10;
     let hex = if trimmed {
