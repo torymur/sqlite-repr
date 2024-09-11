@@ -1,5 +1,5 @@
 .PHONY: setup
-setup: included included/simple included/big_page included/overflow_page included/two_tables included/interior_table
+setup: included included/simple included/big_page included/overflow_page included/table_index_leaves included/interior_table
 	
 included:
 	mkdir $@
@@ -26,7 +26,7 @@ included/interior_table:
 		'create table macro_story(line)' \
 		'insert into macro_story select value from fileio_scan("dev/lines.txt")'\
 		'create table same_macro_story(line)' \
-		'insert into same_macro_story select value from fileio_scan("dev/lines.txt")'\
+		'insert into same_macro_story select value from fileio_scan("dev/lines.txt")'
 
 included/big_page:
 	sqlite3 $@ \
@@ -35,12 +35,14 @@ included/big_page:
 		'insert into big_page values(1),(2),(3),(4)'
 
 
-included/two_tables:
+included/table_index_leaves:
 	sqlite3 $@ \
-		'create table simple(int)' \
-		'insert into simple values(1),(2),(3),(4)' \
-		'create table two_cols(int,text)' \
-		'insert into two_cols values(1,"one"),(2,"two"),(3,"three"),(4,"four")'
+		'create table stars(id INTEGER PRIMARY KEY, name TEXT, distance REAL, brightness REAL)' \
+		'insert into stars values(100,"Sirius",8.6,-1.46),(200,"Altair",16.7,0.77),(300,"Vega",25,0.03),(400,"Polaris",323,2.02)' \
+		'create index idx_stars_name on stars (name)'\
+		'create table spaceships(launched,name,operator)' \
+		'insert into spaceships values(1977,"Voyager 1","NASA"),(1984,"Space Shuttle Discovery","NASA"),(2020,"SpaceX Crew Dragon","SpaceX")'\
+		'create index idx_spaceships_name on spaceships(name)'\
 
 .PHONY: clean
 clean:

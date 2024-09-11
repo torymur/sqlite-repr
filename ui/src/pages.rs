@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use parser::cell::{TableInteriorCell, TableLeafCell};
 use parser::*;
 
 use crate::header::DBHeaderPart;
@@ -82,6 +81,7 @@ impl PageView for BtreePageElement {
         let sign = match self.page.page_header.page_type {
             PageHeaderType::LeafTable => "ꕤ ",
             PageHeaderType::InteriorTable => "☰ ",
+            PageHeaderType::LeafIndex => "🛈 ",
             _ => "",
         };
         format!("{} {}", sign, self.page.page_header.page_type)
@@ -267,6 +267,7 @@ impl CellPart {
         let fields = match cell {
             Cell::TableLeaf(c) => Self::table_leaf_fields(c, offset),
             Cell::TableInterior(c) => Self::table_interior_fields(c, offset),
+            Cell::IndexLeaf(c) => Self::index_leaf_fields(c, offset),
         };
         Self { fields, id }
     }
@@ -290,20 +291,61 @@ impl CellPart {
                 cell_header_style,
             )),
         ];
+        let offset = rowid_offset + cell.rowid_varint.bytes.len();
+        let offset = Self::payload_fields(&cell.payload, &mut fields, offset);
+        Self::overflow_fields(&cell.overflow, &mut fields, offset);
+        fields
+    }
 
-        let payload = &cell.payload;
-        let payload_offset = rowid_offset + cell.rowid_varint.bytes.len();
+    fn table_interior_fields(cell: &TableInteriorCell, offset: usize) -> Vec<Rc<Field>> {
+        let cell_header_style = "bg-slate-300";
+        vec![
+            Rc::new(Field::new(
+                "Page number of the left child.",
+                offset,
+                4,
+                Value::PageNumber(cell.left_page_number),
+                cell_header_style,
+            )),
+            Rc::new(Field::new(
+                "A varint which is the integer key, a.k.a. 'rowid'.",
+                4,
+                cell.rowid_varint.bytes.len(),
+                Value::Varint(cell.rowid_varint.clone()),
+                cell_header_style,
+            )),
+        ]
+    }
+
+    fn index_leaf_fields(cell: &IndexLeafCell, mut offset: usize) -> Vec<Rc<Field>> {
+        let cell_header_style = "bg-slate-300";
+        let mut fields = vec![
+            Rc::new(Field::new(
+                "Cell Header. A varint, which is the total number of bytes of payload, including any overflow.",
+                offset,
+                cell.payload_varint.bytes.len(),
+                Value::Varint(cell.payload_varint.clone()),
+                cell_header_style,
+            )),
+        ];
+        offset += cell.payload_varint.bytes.len();
+        let offset = Self::payload_fields(&cell.payload, &mut fields, offset);
+        Self::overflow_fields(&cell.overflow, &mut fields, offset);
+        fields
+    }
+
+    fn payload_fields(payload: &Record, fields: &mut Vec<Rc<Field>>, mut offset: usize) -> usize {
         let record_header_style = "bg-slate-330";
         fields.push(
             Rc::new(Field::new(
                 "Cell Payload: Record Header. First value is varint, which determines total number of bytes in the header, including the size of varint.",
-                payload_offset,
+                offset,
                 payload.header.size.bytes.len(),
                 Value::Varint(payload.header.size.clone()),
                 record_header_style,
             ))
         );
-        let mut offset = payload_offset + payload.header.size.bytes.len();
+        offset += payload.header.size.bytes.len();
         for datatype in &payload.header.datatypes {
             fields.push(
                 Rc::new(Field::new(
@@ -333,38 +375,23 @@ impl CellPart {
             )));
             offset += size;
         }
+        offset
+    }
 
-        if let Some(overflow) = &cell.overflow {
+    fn overflow_fields(
+        overflow: &Option<CellOverflow>,
+        fields: &mut Vec<Rc<Field>>,
+        offset: usize,
+    ) {
+        if let Some(overflow) = overflow {
             fields.push(Rc::new(Field::new(
                 "Cell Payload: Page Overflow. When the payload of a b-tree cell is too large for the b-tree page, the surplus is spilled onto overflow pages. Overflow pages form a linked list. The first four bytes of each overflow page are a big-endian integer which is the page number of the next page in the chain, or zero for the final page in the chain. The fifth byte through the last usable byte are used to hold overflow content.",
                 offset,
                 4,
                 Value::PageNumber(overflow.page),
                 "bg-slate-390",
-            )));
+            )))
         }
-
-        fields
-    }
-
-    fn table_interior_fields(cell: &TableInteriorCell, offset: usize) -> Vec<Rc<Field>> {
-        let cell_header_style = "bg-slate-300";
-        vec![
-            Rc::new(Field::new(
-                "Page number of the left child.",
-                offset,
-                4,
-                Value::PageNumber(cell.left_page_number),
-                cell_header_style,
-            )),
-            Rc::new(Field::new(
-                "A varint which is the integer key, a.k.a. 'rowid'.",
-                4,
-                cell.rowid_varint.bytes.len(),
-                Value::Varint(cell.rowid_varint.clone()),
-                cell_header_style,
-            )),
-        ]
     }
 }
 

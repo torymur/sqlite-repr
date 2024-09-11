@@ -21,21 +21,21 @@ pub type Result<T, E = StdError> = std::result::Result<T, E>;
 // Preloaded examples of databases to start UI with something
 pub const SIMPLE_DB_BYTES: &[u8] = include_bytes!("../included/simple");
 pub const BIG_PAGE_DB_BYTES: &[u8] = include_bytes!("../included/big_page");
-pub const TWO_TABLES_DB_BYTES: &[u8] = include_bytes!("../included/two_tables");
+pub const TABLE_INDEX_LEAVES_DB_BYTES: &[u8] = include_bytes!("../included/table_index_leaves");
 pub const OVERFLOW_PAGE_DB_BYTES: &[u8] = include_bytes!("../included/overflow_page");
 pub const INTERIOR_TABLE_DB_BYTES: &[u8] = include_bytes!("../included/interior_table");
 pub const SIMPLE_DB: &str = "Simple";
 pub const BIG_PAGE_DB: &str = "Big page";
-pub const TWO_TABLES_DB: &str = "Two tables";
+pub const TABLE_INDEX_LEAVES_DB: &str = "Table/Index leaves";
 pub const OVERFLOW_PAGE_DB: &str = "Overflow pages";
-pub const INTERIOR_TABLE_DB: &str = "Interior Table";
+pub const INTERIOR_TABLE_DB: &str = "Interior table";
 
 impl Viewer {
     pub fn new_from_included(name: &str) -> Result<Self, StdError> {
         let included_db = BTreeMap::from([
             (SIMPLE_DB, SIMPLE_DB_BYTES),
             (BIG_PAGE_DB, BIG_PAGE_DB_BYTES),
-            (TWO_TABLES_DB, TWO_TABLES_DB_BYTES),
+            (TABLE_INDEX_LEAVES_DB, TABLE_INDEX_LEAVES_DB_BYTES),
             (OVERFLOW_PAGE_DB, OVERFLOW_PAGE_DB_BYTES),
             (INTERIOR_TABLE_DB, INTERIOR_TABLE_DB_BYTES),
         ]);
@@ -57,11 +57,12 @@ impl Viewer {
             };
             // Check for overflow information in each cell of the page.
             for cell in &page.cells {
-                let cell = match cell {
+                let cell_overflow = match cell {
                     Cell::TableInterior(_) => continue, // the only one without overflow
-                    Cell::TableLeaf(c) => c,
+                    Cell::TableLeaf(c) => &c.overflow,
+                    Cell::IndexLeaf(c) => &c.overflow,
                 };
-                match &cell.overflow {
+                match cell_overflow {
                     None => continue,
                     Some(overflow) => {
                         let opage = reader
