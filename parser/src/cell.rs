@@ -4,12 +4,15 @@
 /// A leaf b-tree page has no pointers, but it still uses the cell structure to hold
 /// keys for index b-trees or keys and content for table b-trees.
 /// Data is also contained in the cell.
-use crate::{slc, OverflowUnit, Record, RecordCode, StdError, TextEncoding, Varint};
+use std::rc::Rc;
+
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cell {
     TableLeaf(TableLeafCell),
     TableInterior(TableInteriorCell),
+    IndexLeaf(IndexLeafCell),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,18 +29,76 @@ pub struct TableLeafCell {
     pub overflow: Option<CellOverflow>,
 }
 
-impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
-    type Error = StdError;
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableInteriorCell {
+    pub left_page_number: u32,
+    pub rowid_varint: Varint,
+}
 
-    fn try_from(value: (TextEncoding, u64, u8, &[u8])) -> Result<Self, Self::Error> {
-        let (text_encoding, page_size, reserved_size, buf) = value;
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexLeafCell {
+    pub payload_varint: Varint,
+    pub payload: Record,
+    pub overflow: Option<CellOverflow>,
+}
 
-        // -- Get first two varints of cell header.
-        let payload_varint = Varint::new(buf);
-        let mut offset = payload_varint.bytes.len();
+impl Cell {
+    pub fn new(
+        page_type: PageHeaderType,
+        db_header: Rc<DBHeader>,
+        buf: &[u8],
+    ) -> Result<Self, StdError> {
+        match page_type {
+            PageHeaderType::LeafTable => {
+                let payload_varint = Varint::new(buf);
+                let mut offset = payload_varint.bytes.len();
 
-        let rowid_varint = Varint::new(&buf[offset..]);
-        offset += rowid_varint.bytes.len();
+                let rowid_varint = Varint::new(&buf[offset..]);
+                offset += rowid_varint.bytes.len();
+
+                let max_payload = |u| u - 35;
+                let (payload, overflow) =
+                    Self::parse_payload(db_header, &max_payload, &payload_varint, buf, offset)?;
+
+                Ok(Cell::TableLeaf(TableLeafCell {
+                    payload_varint,
+                    rowid_varint,
+                    payload,
+                    overflow,
+                }))
+            }
+            PageHeaderType::InteriorTable => Ok(Cell::TableInterior(TableInteriorCell {
+                left_page_number: slc!(buf, 0, 4, u32),
+                rowid_varint: Varint::new(&buf[4..]),
+            })),
+            PageHeaderType::LeafIndex => {
+                let payload_varint = Varint::new(buf);
+                let offset = payload_varint.bytes.len();
+
+                let max_payload = |u| ((u - 12) * 64 / 255) - 23;
+                let (payload, overflow) =
+                    Self::parse_payload(db_header, &max_payload, &payload_varint, buf, offset)?;
+
+                Ok(Cell::IndexLeaf(IndexLeafCell {
+                    payload_varint,
+                    payload,
+                    overflow,
+                }))
+            }
+            _ => unreachable!("Cell isn't yet implemented for this type."),
+        }
+    }
+
+    fn parse_payload(
+        db_header: Rc<DBHeader>,
+        max_payload: &dyn Fn(u64) -> u64,
+        payload_varint: &Varint,
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(Record, Option<CellOverflow>), StdError> {
+        let text_encoding = db_header.text_encoding;
+        let page_size = db_header.page_size;
+        let reserved_size = db_header.reserved_page_space;
 
         // -- Do the math to check for overflow.
         // Let:
@@ -49,7 +110,8 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
         //      before spilling is allowed,
         //
         // u = page size - reserved space
-        // x = u - 35
+        // - x = u - 35 (for leaf table page) OR
+        // - x = ((u-12)*64/255)-23 (for interior/leaf index pages)
         //
         // if p <= x {
         //      entire payload stored on the btree leaf page
@@ -65,7 +127,7 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
         //      }
         // }
         let u = page_size - reserved_size as u64;
-        let x = u - 35;
+        let x = max_payload(u);
         let p = payload_varint.value as u64;
         let (overflow_page, payload_size, overflow_size) = if p <= x {
             (0, p as usize, 0_usize)
@@ -91,14 +153,9 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
         let from_buf = (text_encoding, &buf[offset..offset + payload_size]);
         let payload = Record::try_from(from_buf)?;
 
-        // -- Cell might have overflows.
+        // -- Overflow check.
         if overflow_size == 0 {
-            return Ok(Self {
-                payload_varint,
-                rowid_varint,
-                payload,
-                overflow: None,
-            });
+            return Ok((payload, None));
         }
         // If there is an overflow in one column, the rest of the columns after the
         // spilled one will be on the overflow pages as well, following it.
@@ -128,29 +185,6 @@ impl TryFrom<(TextEncoding, u64, u8, &[u8])> for TableLeafCell {
             page: overflow_page,
             units: overflow_units,
         });
-
-        Ok(Self {
-            payload_varint,
-            rowid_varint,
-            payload,
-            overflow,
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TableInteriorCell {
-    pub left_page_number: u32,
-    pub rowid_varint: Varint,
-}
-
-impl TryFrom<&[u8]> for TableInteriorCell {
-    type Error = StdError;
-
-    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
-        Ok(Self {
-            left_page_number: slc!(buf, 0, 4, u32),
-            rowid_varint: Varint::new(&buf[4..]),
-        })
+        Ok((payload, overflow))
     }
 }

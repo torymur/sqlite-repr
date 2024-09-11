@@ -1,9 +1,7 @@
 /// BTree Page exploration
-use crate::{
-    cell::{TableInteriorCell, TableLeafCell},
-    slc, Cell, DBHeader, Result, StdError, DB_HEADER_SIZE,
-};
 use std::rc::Rc;
+
+use crate::*;
 
 const PAGE_HEADER_SIZE: usize = 12;
 const PAGE_RIGHT_PTR_SIZE: usize = 4;
@@ -221,21 +219,11 @@ impl TryFrom<(Rc<DBHeader>, usize, &[u8])> for Page {
         // -- Parse cells.
         let mut cells: Vec<Cell> = vec![];
         for ptr in &cell_pointer.array {
-            let cell = match page_header.page_type {
-                PageHeaderType::LeafTable => {
-                    let params = (
-                        db_header.text_encoding,
-                        db_header.page_size,
-                        db_header.reserved_page_space,
-                        &buf[*ptr as usize..],
-                    );
-                    Cell::TableLeaf(TableLeafCell::try_from(params)?)
-                }
-                PageHeaderType::InteriorTable => {
-                    Cell::TableInterior(TableInteriorCell::try_from(&buf[*ptr as usize..])?)
-                }
-                _ => unreachable!("Cell isn't yet implemented for this type."),
-            };
+            let cell = Cell::new(
+                page_header.page_type,
+                db_header.clone(),
+                &buf[*ptr as usize..],
+            )?;
             cells.push(cell)
         }
 

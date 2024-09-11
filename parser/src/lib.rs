@@ -9,7 +9,7 @@ pub mod reader;
 pub mod record;
 pub mod varint;
 
-pub use cell::Cell;
+pub use cell::{Cell, CellOverflow, IndexLeafCell, TableInteriorCell, TableLeafCell};
 pub use header::{DBHeader, TextEncoding};
 pub use overflow::{OverflowData, OverflowPage, OverflowUnit};
 pub use page::{CellPointer, Page, PageHeader, PageHeaderType, CELL_PTR_SIZE};
