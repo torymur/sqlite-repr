@@ -130,6 +130,13 @@ impl PageHeaderPart {
             )),
             Rc::new(Field::new(
                 "Number of cells on the page. A page might contain no cells, which is only possible for a root page of a table that contains no rows. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array.",
+                offset + 3,
+                2,
+                Value::U16(page.page_header.cell_num),
+                ""
+            )),
+            Rc::new(Field::new(
+                "Start of the cell content area. A zero value for this integer is interpreted as 65536. SQLite strives to place cells as far toward the end of the b-tree page as it can, in order to leave space for future growth of the cell pointer array. If a page contains no cells, then the offset to the cell content area will equal the page size minus the bytes of reserved space.",
                 offset + 5,
                 2,
                 Value::CellStartOffset(page.page_header.cell_start_offset),

@@ -2,6 +2,7 @@
 //! rendering of parsed structures.
 
 pub mod header;
+pub mod included_db;
 pub mod index;
 pub mod overflow_pages;
 pub mod pages;

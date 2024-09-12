@@ -110,11 +110,21 @@ pub fn Header() -> Element {
         div {
             class: "h-12 flex items-center bg-slate-200",
             div {
-                class: "text-xl font-bold tracking-tighter pl-4",
+                class: "pl-4",
+                a {
+                    href: "https://www.sqlite.org/fileformat2.html",
+                    img {
+                        class: "h-10 object-scale-down",
+                        src: "./sqlite_logo.png"
+                    }
+                }
+            }
+            div {
+                class: "text-xl font-bold tracking-tighter",
                 "SQLite File Format",
             }
             div {
-                class: "pl-4 tooltip tooltip-right",
+                class: "tooltip tooltip-bottom pl-4",
                 "data-tip": "Like the project? Give us a star ☆",
                 a {
                     href: "https://github.com/torymur/sqlite-repr",
@@ -127,10 +137,7 @@ pub fn Header() -> Element {
             div { class: "flex-grow" }
             div {
                 class: "join",
-                div {
-                    class: "join-item btn btn-secondary tracking-tighter font-bold",
-                    "Example database"
-                }
+                ExampleDetails { }
                 select {
                     class: "join-item select select-secondary select-bordered font-bold tracking-tighter focus:outline-none",
                     oninput: move |e| {
@@ -156,6 +163,39 @@ pub fn Header() -> Element {
             div {
                 class: "btn btn-ghost tracking-tighter font-bold",
                 "Add Yours",
+            }
+        }
+    }
+}
+
+pub fn ExampleDetails() -> Element {
+    let current_db = use_context::<AppState>().current_db;
+    let viewer = use_context::<AppState>().viewer;
+    let rviewer = viewer.read();
+    let details = rviewer.included_db.get(current_db().as_str());
+    match details {
+        None => rsx! { div { } },
+        Some((_, desc)) => {
+            rsx! {
+                div {
+                    class: "dropdown dropdown-hover",
+                    div {
+                        class: "join-item btn bg-secondary border border-secondary tracking-tighter font-bold hover:border-secondary hover:bg-secondary",
+                        tabindex: 0,
+                        role: "button",
+                        "Database Example"
+                    }
+                    ul {
+                        class: "text-xs dropdown-content z-[1] menu bg-secondary shadow w-max tracking-tighter",
+                        for line in desc {
+                            li {
+                                a {
+                                    "{line}"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -197,7 +237,7 @@ pub fn SideBar() -> Element {
             class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit overflow-y-auto",
             div {
                 class: "text-lg font-bold truncate pb-4",
-                "🗐  Pages",
+                "Pages",
             }
             div {
                 for (n, page) in pages.into_iter().enumerate() {

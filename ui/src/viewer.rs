@@ -1,46 +1,28 @@
 //! Database UI Viewer.
 
 use std::collections::BTreeMap;
-use std::include_bytes;
 use std::rc::Rc;
 
 use parser::{Cell, OverflowPage, Reader, StdError};
 
+use crate::included_db::INCLUDED_DB;
 use crate::overflow_pages::OverflowPageElementBuilder;
 use crate::pages::BtreePageElementBuilder;
 use crate::PageView;
 
 #[derive(Debug)]
 pub struct Viewer {
-    pub included_db: BTreeMap<&'static str, &'static [u8]>,
+    pub included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])>,
     pub pages: Vec<Rc<dyn PageView>>,
 }
 
 pub type Result<T, E = StdError> = std::result::Result<T, E>;
 
-// Preloaded examples of databases to start UI with something
-pub const SIMPLE_DB_BYTES: &[u8] = include_bytes!("../included/simple");
-pub const BIG_PAGE_DB_BYTES: &[u8] = include_bytes!("../included/big_page");
-pub const TABLE_INDEX_LEAF_DB_BYTES: &[u8] = include_bytes!("../included/table_index_leaf");
-pub const OVERFLOW_PAGE_DB_BYTES: &[u8] = include_bytes!("../included/overflow_page");
-pub const TABLE_INDEX_INTERIOR_DB_BYTES: &[u8] = include_bytes!("../included/table_index_interior");
-pub const SIMPLE_DB: &str = "Simple";
-pub const BIG_PAGE_DB: &str = "Max page size";
-pub const TABLE_INDEX_LEAF_DB: &str = "Leaf nodes";
-pub const OVERFLOW_PAGE_DB: &str = "Overflow pages";
-pub const TABLE_INDEX_INTERIOR_DB: &str = "Interior nodes";
-
 impl Viewer {
     pub fn new_from_included(name: &str) -> Result<Self, StdError> {
-        let included_db = BTreeMap::from([
-            (SIMPLE_DB, SIMPLE_DB_BYTES),
-            (BIG_PAGE_DB, BIG_PAGE_DB_BYTES),
-            (TABLE_INDEX_LEAF_DB, TABLE_INDEX_LEAF_DB_BYTES),
-            (OVERFLOW_PAGE_DB, OVERFLOW_PAGE_DB_BYTES),
-            (TABLE_INDEX_INTERIOR_DB, TABLE_INDEX_INTERIOR_DB_BYTES),
-        ]);
-
-        let bytes = included_db.get(name).ok_or("This db is not included.")?;
+        let included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])> =
+            BTreeMap::from_iter(INCLUDED_DB.iter().map(|v| *v));
+        let (bytes, _) = included_db.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;
         let size = reader.db_header.page_size as usize;
         let mut pages_map: BTreeMap<usize, Rc<dyn PageView>> = BTreeMap::new();

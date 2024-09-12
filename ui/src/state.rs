@@ -4,7 +4,8 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use crate::viewer::{Viewer, SIMPLE_DB};
+use crate::included_db::SIMPLE_DB;
+use crate::viewer::Viewer;
 use crate::{Field, PageView, Part};
 
 #[derive(Clone, Debug)]
