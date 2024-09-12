@@ -81,8 +81,8 @@ impl PageView for BtreePageElement {
         let sign = match self.page.page_header.page_type {
             PageHeaderType::LeafTable => "ꕤ ",
             PageHeaderType::InteriorTable => "☰ ",
-            PageHeaderType::LeafIndex => "🛈 ",
-            _ => "",
+            PageHeaderType::LeafIndex => "✦ ",
+            PageHeaderType::InteriorIndex => "𝄃𝄃𝄃",
         };
         format!("{} {}", sign, self.page.page_header.page_type)
     }
@@ -148,7 +148,7 @@ impl PageHeaderPart {
                 "The right-most pointer. This value appears in the header of interior b-tree pages only and is omitted from all other pages.",
                 offset + 8,
                 4,
-                Value::U32(v),
+                Value::PageNumber(v),
                 ""
             ));
             fields.push(page_num);
@@ -268,6 +268,7 @@ impl CellPart {
             Cell::TableLeaf(c) => Self::table_leaf_fields(c, offset),
             Cell::TableInterior(c) => Self::table_interior_fields(c, offset),
             Cell::IndexLeaf(c) => Self::index_leaf_fields(c, offset),
+            Cell::IndexInterior(c) => Self::index_interior_fields(c, offset),
         };
         Self { fields, id }
     }
@@ -320,6 +321,30 @@ impl CellPart {
     fn index_leaf_fields(cell: &IndexLeafCell, mut offset: usize) -> Vec<Rc<Field>> {
         let cell_header_style = "bg-slate-300";
         let mut fields = vec![
+            Rc::new(Field::new(
+                "Cell Header. A varint, which is the total number of bytes of payload, including any overflow.",
+                offset,
+                cell.payload_varint.bytes.len(),
+                Value::Varint(cell.payload_varint.clone()),
+                cell_header_style,
+            )),
+        ];
+        offset += cell.payload_varint.bytes.len();
+        let offset = Self::payload_fields(&cell.payload, &mut fields, offset);
+        Self::overflow_fields(&cell.overflow, &mut fields, offset);
+        fields
+    }
+
+    fn index_interior_fields(cell: &IndexInteriorCell, mut offset: usize) -> Vec<Rc<Field>> {
+        let cell_header_style = "bg-slate-300";
+        let mut fields = vec![
+            Rc::new(Field::new(
+                "Page number of the left child.",
+                offset,
+                4,
+                Value::PageNumber(cell.left_page_number),
+                cell_header_style,
+            )),
             Rc::new(Field::new(
                 "Cell Header. A varint, which is the total number of bytes of payload, including any overflow.",
                 offset,
