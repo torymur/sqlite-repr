@@ -13,6 +13,7 @@ pub enum Cell {
     TableLeaf(TableLeafCell),
     TableInterior(TableInteriorCell),
     IndexLeaf(IndexLeafCell),
+    IndexInterior(IndexInteriorCell),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,6 +38,14 @@ pub struct TableInteriorCell {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexLeafCell {
+    pub payload_varint: Varint,
+    pub payload: Record,
+    pub overflow: Option<CellOverflow>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexInteriorCell {
+    pub left_page_number: u32,
     pub payload_varint: Varint,
     pub payload: Record,
     pub overflow: Option<CellOverflow>,
@@ -85,7 +94,24 @@ impl Cell {
                     overflow,
                 }))
             }
-            _ => unreachable!("Cell isn't yet implemented for this type."),
+            PageHeaderType::InteriorIndex => {
+                let left_page_number = slc!(buf, 0, 4, u32);
+                let mut offset = 4;
+
+                let payload_varint = Varint::new(&buf[offset..]);
+                offset += payload_varint.bytes.len();
+
+                let max_payload = |u| ((u - 12) * 64 / 255) - 23;
+                let (payload, overflow) =
+                    Self::parse_payload(db_header, &max_payload, &payload_varint, buf, offset)?;
+
+                Ok(Cell::IndexInterior(IndexInteriorCell {
+                    left_page_number,
+                    payload_varint,
+                    payload,
+                    overflow,
+                }))
+            }
         }
     }
 
