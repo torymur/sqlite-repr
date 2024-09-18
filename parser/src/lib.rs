@@ -2,6 +2,7 @@
 #![feature(str_from_utf16_endian)]
 
 pub mod cell;
+pub mod freelist;
 pub mod header;
 pub mod overflow;
 pub mod page;
@@ -12,6 +13,7 @@ pub mod varint;
 pub use cell::{
     Cell, CellOverflow, IndexInteriorCell, IndexLeafCell, TableInteriorCell, TableLeafCell,
 };
+pub use freelist::{LeafFreelistPage, TrunkFreelistPage};
 pub use header::{DBHeader, TextEncoding};
 pub use overflow::{OverflowData, OverflowPage, OverflowUnit};
 pub use page::{CellPointer, Page, PageHeader, PageHeaderType, CELL_PTR_SIZE};

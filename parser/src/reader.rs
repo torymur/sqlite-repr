@@ -1,4 +1,7 @@
-use crate::{DBHeader, OverflowPage, OverflowUnit, Page, Result, StdError};
+use crate::{
+    DBHeader, LeafFreelistPage, OverflowPage, OverflowUnit, Page, Result, StdError,
+    TrunkFreelistPage,
+};
 use std::rc::Rc;
 
 pub const DB_HEADER_SIZE: usize = 100;
@@ -27,14 +30,14 @@ impl Reader {
         Ok(Self { bytes, db_header })
     }
 
-    /// Get fully parsed Btree Page.
+    /// Get parsed Btree Page.
     pub fn get_btree_page(&self, page_num: usize) -> Result<Page> {
         let buf = self.page_slice(page_num)?;
         let page = Page::try_from((self.db_header.clone(), page_num, buf.as_slice()))?;
         Ok(page)
     }
 
-    /// Get fully parsed Overflow Page.
+    /// Get parsed Overflow Page.
     pub fn get_overflow_page(
         &self,
         overflow: Vec<OverflowUnit>,
@@ -43,6 +46,20 @@ impl Reader {
         let buf = self.page_slice(page_num)?;
         let page =
             OverflowPage::try_from((self.db_header.text_encoding, overflow, buf.as_slice()))?;
+        Ok(page)
+    }
+
+    /// Get parsed Trunk Freelist Page.
+    pub fn get_trunk_freelist_page(&self, page_num: usize) -> Result<TrunkFreelistPage> {
+        let buf = self.page_slice(page_num)?;
+        let page = TrunkFreelistPage::try_from(buf.as_slice())?;
+        Ok(page)
+    }
+
+    /// Get Leaf Freelist Page.
+    pub fn get_leaf_freelist_page(&self, page_num: usize) -> Result<LeafFreelistPage> {
+        let buf = self.page_slice(page_num)?;
+        let page = LeafFreelistPage::try_from(buf.as_slice())?;
         Ok(page)
     }
 
