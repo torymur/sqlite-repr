@@ -1,5 +1,5 @@
 .PHONY: setup
-setup: included included/simple included/big_page included/overflow_page included/table_index_leaf included/table_index_interior included/freelist_page
+setup: included included/simple included/big_page included/overflow_page included/table_index_leaf included/table_index_interior included/freelist_page included/mixed
 	
 included:
 	mkdir $@
@@ -8,6 +8,29 @@ included/simple:
 	sqlite3 $@ \
 		'create table simple(int)' \
 		'insert into simple values(1),(2),(3),(4)'
+
+included/big_page:
+	sqlite3 $@ \
+		-cmd 'PRAGMA page_size=65536' \
+		'create table big_page(int)' \
+		'insert into big_page values(1),(2),(3),(4)'
+
+included/table_index_leaf:
+	sqlite3 $@ \
+		'create table stars(id INTEGER PRIMARY KEY, name TEXT, distance REAL, brightness REAL)' \
+		'insert into stars values(100,"Sirius",8.6,-1.46),(200,"Altair",16.7,0.77),(300,"Vega",25,0.03),(400,"Polaris",323,2.02)' \
+		'create index idx_stars_name on stars (name)'\
+		'create table spaceships(launched,name,operator)' \
+		'insert into spaceships values(1977,"Voyager 1","NASA"),(1984,"Space Shuttle Discovery","NASA"),(2020,"SpaceX Crew Dragon","SpaceX")'\
+		'create index idx_spaceships_name on spaceships(name)'
+
+included/table_index_interior:
+	sqlite3 $@ \
+		-cmd '.load ./dev/fileio' \
+		-cmd 'PRAGMA page_size=512' \
+		'create table macro_story(line)' \
+		'insert into macro_story select value from fileio_scan("dev/lines.txt")'\
+		'create index idx_macro_story_line on macro_story(line)'
 
 included/overflow_page:
 	sqlite3 $@ \
@@ -30,29 +53,17 @@ included/freelist_page:
 		'delete from mixed_overflow' \
 		'drop table blob_overflow'
 
-included/table_index_interior:
+included/mixed:
 	sqlite3 $@ \
 		-cmd '.load ./dev/fileio' \
-		-cmd 'PRAGMA page_size=512' \
+		-cmd 'PRAGMA page_size=1024' \
+		'create table blob_overflow(blob)' \
+		'insert into blob_overflow values(fileio_read("dev/overflow.txt"))' \
 		'create table macro_story(line)' \
 		'insert into macro_story select value from fileio_scan("dev/lines.txt")'\
-		'create index idx_macro_story_line on macro_story(line)'
-
-included/big_page:
-	sqlite3 $@ \
-		-cmd 'PRAGMA page_size=65536' \
-		'create table big_page(int)' \
-		'insert into big_page values(1),(2),(3),(4)'
-
-
-included/table_index_leaf:
-	sqlite3 $@ \
-		'create table stars(id INTEGER PRIMARY KEY, name TEXT, distance REAL, brightness REAL)' \
-		'insert into stars values(100,"Sirius",8.6,-1.46),(200,"Altair",16.7,0.77),(300,"Vega",25,0.03),(400,"Polaris",323,2.02)' \
-		'create index idx_stars_name on stars (name)'\
-		'create table spaceships(launched,name,operator)' \
-		'insert into spaceships values(1977,"Voyager 1","NASA"),(1984,"Space Shuttle Discovery","NASA"),(2020,"SpaceX Crew Dragon","SpaceX")'\
-		'create index idx_spaceships_name on spaceships(name)'
+		'insert into macro_story select cast(blob as TEXT) from blob_overflow' \
+		'create index idx_macro_story_line on macro_story(line)' \
+		'drop table blob_overflow'
 
 .PHONY: clean
 clean:

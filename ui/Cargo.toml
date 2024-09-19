@@ -15,6 +15,7 @@ path = "src/lib.rs"
 
 [dependencies]
 dioxus = { version = "0.5", features = ["web", "router"] }
+dioxus-free-icons = { version = "0.8", features = ["bootstrap"] }
 hex = {version = "0.4.3"}
 wasm-bindgen = {version = "0.2.92"}
 parser = {path = "../parser"}

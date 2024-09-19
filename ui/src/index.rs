@@ -4,6 +4,8 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use dioxus_free_icons::icons::bs_icons::{BsArrowBarLeft, BsArrowBarRight};
+use dioxus_free_icons::Icon;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
@@ -123,17 +125,6 @@ pub fn Header() -> Element {
                 class: "text-xl font-bold tracking-tighter",
                 "SQLite File Format",
             }
-            div {
-                class: "tooltip tooltip-bottom pl-4",
-                "data-tip": "Like the project? Give us a star ☆",
-                a {
-                    href: "https://github.com/torymur/sqlite-repr",
-                    img {
-                        class: "h-6 object-scale-down",
-                        src: "./github-mark.png"
-                    }
-                }
-            }
             div { class: "flex-grow" }
             div {
                 class: "join",
@@ -161,8 +152,27 @@ pub fn Header() -> Element {
             }
             div { class: "flex-grow" }
             div {
-                class: "btn btn-ghost tracking-tighter font-bold",
-                "Add Yours",
+                class: "flex text-sm items-center tracking-lighter font-thin",
+                "Built with",
+                a {
+                    class: "flex",
+                    href: "https://dioxuslabs.com/",
+                    img {
+                        class: "h-7 object-scale-down",
+                        src: "./dioxus_logo.png"
+                    }
+                }
+            }
+            div {
+                class: "tooltip tooltip-left pl-2 pr-4",
+                "data-tip": "Like the project? Give us a star ☆",
+                a {
+                    href: "https://github.com/torymur/sqlite-repr",
+                    img {
+                        class: "h-7 object-scale-down",
+                        src: "./github-mark.png"
+                    }
+                }
             }
         }
     }
@@ -211,7 +221,7 @@ pub fn Body() -> Element {
                 div { class: "flex-grow" }
             }
             div {
-                class: "flex flex-col w-full",
+                class: "flex flex-col w-full text-xs",
                 div {
                     Description { }
                 }
@@ -280,7 +290,7 @@ pub fn Description() -> Element {
         None => {
             rsx! {
                 div {
-                    class: "p-4 h-80 w-full overflow-auto text-sm",
+                    class: "p-4 h-80 w-full overflow-auto",
                     "{selected_page().desc()}"
                 }
             }
@@ -288,7 +298,7 @@ pub fn Description() -> Element {
         Some(field) => {
             rsx! {
                 div {
-                    class: "p-4 h-80 w-full overflow-auto text-sm",
+                    class: "p-4 h-80 w-full overflow-auto",
                     div {
                         "{selected_page().desc()}"
                     }
@@ -365,7 +375,7 @@ pub fn FieldNavigation(title: String) -> Element {
                 div {
                     class: "divider items-center",
                     div {
-                        class: "text-lg text-center",
+                        class: "text-sm font-medium capitalize",
                         "{title}"
                     }
                 }
@@ -376,22 +386,26 @@ pub fn FieldNavigation(title: String) -> Element {
                 div {
                     class: "divider items-center",
                     button {
-                        class: "btn btn-sm",
+                        class: "btn btn-xs btn-ghost focus:outline-none",
                         onclick: {
                             move |_| move_to(NavMove::Left, nf, np)
                         },
-                        "⇦ "
+                        Icon {
+                            icon: BsArrowBarLeft,
+                        }
                     }
                     div {
-                        class: "text-lg text-center self-center",
+                        class: "text-sm font-medium capitalize",
                         "{title}"
                     }
                     button {
-                        class: "btn btn-sm",
+                        class: "btn btn-xs btn-ghost focus:outline-none",
                         onclick: {
                             move |_| move_to(NavMove::Right, nf, np)
                         },
-                        "⇨ "
+                        Icon {
+                            icon: BsArrowBarRight,
+                        }
                     }
                 }
             }
