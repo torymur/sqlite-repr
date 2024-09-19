@@ -280,7 +280,7 @@ pub fn Description() -> Element {
         None => {
             rsx! {
                 div {
-                    class: "p-4 h-80 w-full overflow-auto",
+                    class: "p-4 h-80 w-full overflow-auto text-sm",
                     "{selected_page().desc()}"
                 }
             }
