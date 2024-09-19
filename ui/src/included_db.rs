@@ -6,9 +6,11 @@ pub const SIMPLE_DB: &str = "Simple";
 pub const BIG_PAGE_DB: &str = "Max page size";
 pub const TABLE_INDEX_LEAF_DB: &str = "Leaf nodes";
 pub const OVERFLOW_PAGE_DB: &str = "Overflow pages";
+pub const FREELIST_PAGE_DB: &str = "Freelist pages";
 pub const TABLE_INDEX_INTERIOR_DB: &str = "Interior nodes";
 
-pub static INCLUDED_DB: &'static [(&'static str, (&'static [u8], &'static [&'static str]))] = &[
+#[allow(clippy::type_complexity)]
+pub static INCLUDED_DB: &[(&str, (&[u8], &[&str]))] = &[
     (
         SIMPLE_DB,
         (
@@ -67,6 +69,21 @@ pub static INCLUDED_DB: &'static [(&'static str, (&'static [u8], &'static [&'sta
                 "CREATE TABLE macro_story(line)",
                 "INSERT INTO macro_story SELECT VALUE FROM fileio_scan('dev/lines.txt')",
                 "CREATE INDEX idx_macro_story_line ON macro_story(line)",
+            ],
+        ),
+    ),
+    (
+       FREELIST_PAGE_DB,
+       (
+            include_bytes!("../included/freelist_page"),
+            &[
+                "PRAGMA page_size=1024",
+                "CREATE TABLE mixed_overflow(text, blob)",
+                "CREATE TABLE blob_overflow(blob)",
+                "INSERT INTO blob_overflow VALUES(fileio_read('dev/overflow.txt'))",
+                "INSERT INTO mixed_overflow SELECT CAST(blob as TEXT), blob FROM blob_overflow",
+                "DELETE FROM mixed_overflow",
+                "DROP TABLE blob_overflow",
             ],
         ),
     ),

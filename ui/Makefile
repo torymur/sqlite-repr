@@ -1,5 +1,5 @@
 .PHONY: setup
-setup: included included/simple included/big_page included/overflow_page included/table_index_leaf included/table_index_interior
+setup: included included/simple included/big_page included/overflow_page included/table_index_leaf included/table_index_interior included/freelist_page
 	
 included:
 	mkdir $@
@@ -18,6 +18,17 @@ included/overflow_page:
 		'insert into blob_overflow values(fileio_read("dev/overflow.txt"))' \
 		'insert into mixed_overflow select cast(blob as TEXT), 234234235, 0, blob from blob_overflow' \
 		'insert into mixed_overflow select cast(blob as TEXT), 94542343, 1, blob from blob_overflow'
+
+included/freelist_page:
+	sqlite3 $@ \
+		-cmd '.load ./dev/fileio' \
+		-cmd 'PRAGMA page_size=1024' \
+		'create table mixed_overflow(text,blob)' \
+		'create table blob_overflow(blob)' \
+		'insert into blob_overflow values(fileio_read("dev/overflow.txt"))' \
+		'insert into mixed_overflow select cast(blob as TEXT), blob from blob_overflow' \
+		'delete from mixed_overflow' \
+		'drop table blob_overflow'
 
 included/table_index_interior:
 	sqlite3 $@ \
