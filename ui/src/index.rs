@@ -4,12 +4,14 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use dioxus_free_icons::icons::bs_icons::{BsArrowBarLeft, BsArrowBarRight};
+use dioxus_free_icons::icons::bs_icons::{
+    BsArrowBarLeft, BsArrowBarRight, BsArrowReturnRight, BsArrowRight,
+};
 use dioxus_free_icons::Icon;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
-use crate::{Field, Value};
+use crate::{BTreeNodeView, Field, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NavMove {
@@ -216,26 +218,68 @@ pub fn Body() -> Element {
         div {
             class: "flex w-full",
             div {
-                class: "bg-secondary",
-                SideBar { }
-                div { class: "flex-grow" }
+                class: "flex bg-secondary w-1/5",
+                LeftSide { }
             }
             div {
-                class: "flex flex-col w-full text-xs",
-                div {
-                    Description { }
-                }
-                div {
-                    Visual { }
-                }
-                div { class: "flex-grow" }
+                class: "flex flex-grow flex-col w-4/5 text-xs",
+                RightSide { }
             }
 
         }
     }
 }
 
-pub fn SideBar() -> Element {
+pub fn RightSide() -> Element {
+    rsx! {
+        div {
+            Description { }
+        }
+        div {
+            Visual { }
+        }
+    }
+}
+
+pub fn LeftSide() -> Element {
+    let mut list = use_signal(|| true);
+    rsx! {
+        div {
+            class: "p-4 h-[calc(100vh-48px)] overflow-auto w-full text-sm font-medium",
+            div {
+                class: "flex w-full",
+                div {
+                    class: "border border-slate-800 hover:bg-slate-800 hover:text-slate-330",
+                    class: if list() {"bg-slate-800 text-slate-330"},
+                    onclick: move |_| {
+                        list.set(true);
+                    },
+                    div {
+                        class: "p-2",
+                        "Page View"
+                    }
+                }
+                div {
+                    class: "border border-slate-800 hover:bg-slate-800 hover:text-slate-330",
+                    class: if !list() {"bg-slate-800 text-slate-330"},
+                    onclick: move |_| {
+                        list.set(false);
+                    },
+                    div {
+                        class: "p-2",
+                        "Tree View"
+                    }
+                }
+                div { class: "flex-grow border-b border-b-slate-800" }
+            }
+            div {
+                if list() {PageListTab { }} else {PageTreeTab { }}
+            }
+        }
+    }
+}
+
+pub fn PageListTab() -> Element {
     let viewer = use_context::<AppState>().viewer;
     let pages = viewer.read().pages.clone();
     let mut selected_page = use_context::<AppState>().selected_page;
@@ -244,15 +288,11 @@ pub fn SideBar() -> Element {
     let mut locked_field = use_context::<AppState>().locked_field;
     rsx! {
         div {
-            class: "rounded-box p-4 h-[calc(100vh-48px)] w-fit overflow-y-auto",
-            div {
-                class: "text-lg font-bold truncate pb-4",
-                "Pages",
-            }
+            class: "rounded-box p-4 min-w-fit max-w-fit",
             div {
                 for (n, page) in pages.into_iter().enumerate() {
                     div {
-                        class: "flex w-full",
+                        class: "flex",
                         div { class: "flex-grow" }
                         div {
                             class: "leading-tight tracking-tighter font-medium text-cyan-950 text-xs border-r-4 border-cyan-950 pr-1",
@@ -270,6 +310,137 @@ pub fn SideBar() -> Element {
                             "Page {n+1}",
                             br {}
                             "{&page.label()}",
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn PageTreeTab() -> Element {
+    let viewer = use_context::<AppState>().viewer;
+    let btrees = &viewer.read().btrees;
+    rsx! {
+        div {
+            class: "rounded-box min-w-48 max-w-96",
+            div {
+                class: "join join-vertical w-full",
+                for (n, tree) in btrees.iter().enumerate() {
+                    div {
+                        class: "collapse collapse-arrow join-item border-b border-b-slate-800",
+                        input {
+                            r#type: "radio",
+                            name: "my-accordion-1",
+                            "checked": if n == 0 {"true"},
+                        }
+                        div {
+                            class: "collapse-title text-sm capitalize font-medium truncate",
+                            div {
+                                class: "truncate pb-2",
+                                "{tree.name}"
+                            }
+                            div {
+                                class: "text-xs font-normal truncate",
+                                "{tree.ttype} Type Btree"
+                            }
+                            div {
+                                class: "text-xs font-normal truncate",
+                                "Root Page {tree.root.page_num}"
+                            }
+                        }
+                        div {
+                            class: "collapse-content text-xs overflow-x-auto",
+                            NodeElement { node: tree.root.clone(), root: true }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
+    let children_interior = node.children.iter().any(|c| c.children.is_empty() == false);
+    let node_type = if node.children.is_empty() {
+        "Leaf".to_string()
+    } else {
+        "Interior".to_string()
+    };
+
+    let viewer = use_context::<AppState>().viewer;
+    let mut selected_page = use_context::<AppState>().selected_page;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut locked_field = use_context::<AppState>().locked_field;
+    rsx! {
+        div {
+            class: "w-full",
+            div {
+                class: if !root {"px-3"},
+                div {
+                    div {
+                        class: "flex items-center space-x-1 btn-ghost btn-xs btn-block",
+                        class: if selected_page.read().id() == node.page_num {"btn-active"},
+                        onclick: {
+
+                            let pages = viewer.read().pages.to_vec();
+                            move |_| {
+                                *selected_page.write() = pages[node.page_num - 1].clone();
+                                *selected_part.write() = None;
+                                *selected_field.write() = None;
+                                *locked_field.write() = None;
+                            }
+                        },
+                        Icon {
+                            width: 15,
+                            height: 15,
+                            icon: BsArrowReturnRight,
+                        }
+                        div {
+                            class: "font-medium",
+                            "{node.page_num}"
+                        }
+                        div {
+                            if root {"Root {node_type}"} else {"{node_type}"}
+                        }
+                    }
+                    for page_num in node.overflow {
+                        div {
+                            class: "flex pl-3 items-center space-x-1 btn-ghost btn-xs btn-block",
+                            class: if selected_page.read().id() == page_num {"btn-active"},
+                            onclick: {
+
+                                let pages = viewer.read().pages.to_vec();
+                                move |_| {
+                                    *selected_page.write() = pages[page_num - 1].clone();
+                                    *selected_part.write() = None;
+                                    *selected_field.write() = None;
+                                    *locked_field.write() = None;
+                                }
+                            },
+                            Icon {
+                                width: 15,
+                                height: 15,
+                                icon: BsArrowRight,
+                            }
+                            div {
+                                class: "font-medium",
+                                "{page_num}"
+                            }
+                            div {
+                                "Overflow"
+                            }
+                        }
+                    }
+                }
+                div {
+                    class: if children_interior {"flex"} else {"flex-col"},
+                    for child in node.children {
+                        div {
+                            class: "grow",
+                            NodeElement {node: child.clone(), root: false}
                         }
                     }
                 }
