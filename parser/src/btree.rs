@@ -6,7 +6,13 @@ pub struct BTreeNode {
     pub page: Page,
     pub page_num: usize,
     pub children: Option<Vec<BTreeNode>>,
-    pub overflow: Option<Vec<OverflowPage>>,
+    pub overflow: Option<Vec<OverflowNode>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct OverflowNode {
+    pub page: OverflowPage,
+    pub page_num: usize,
 }
 
 impl BTreeNode {
@@ -15,17 +21,27 @@ impl BTreeNode {
         let mut children = vec![];
         let mut overflow = vec![];
 
-        let extend_overflow = |acc: &mut Vec<OverflowPage>,
-                               cell_overflow: &Option<CellOverflow>| {
-            if let Some(overflow) = cell_overflow {
-                let res = Self::follow_overflow(
-                    vec![],
-                    overflow.units.to_vec(),
-                    overflow.page as usize,
-                    reader,
-                );
-                if let Ok(overflow) = res {
-                    acc.extend(overflow)
+        let mut extend_overflow = |cell_overflow: &Option<CellOverflow>| {
+            if let Some(o) = cell_overflow {
+                let res = Self::follow_overflow(vec![], o.units.to_vec(), o.page as usize, reader);
+                if let Ok(res) = res {
+                    let mut page_nums =
+                        res.iter().map(|o| o.next_page as usize).collect::<Vec<_>>();
+
+                    // Transform list of 'next_page' numbers into page numbers.
+                    // Last next page number is 0 to mark the end of the linked list.
+                    page_nums.insert(0, o.page as usize);
+                    page_nums.pop();
+
+                    let overflow_list = res
+                        .into_iter()
+                        .zip(page_nums.into_iter())
+                        .map(|(o, n)| OverflowNode {
+                            page: o,
+                            page_num: n,
+                        })
+                        .collect::<Vec<OverflowNode>>();
+                    overflow.extend(overflow_list);
                 }
             }
         };
@@ -36,14 +52,14 @@ impl BTreeNode {
                     children.push(BTreeNode::new(cell.left_page_number as usize, reader)?);
                 }
                 Cell::TableLeaf(cell) => {
-                    extend_overflow(&mut overflow, &cell.overflow);
+                    extend_overflow(&cell.overflow);
                 }
                 Cell::IndexInterior(cell) => {
                     children.push(BTreeNode::new(cell.left_page_number as usize, reader)?);
-                    extend_overflow(&mut overflow, &cell.overflow);
+                    extend_overflow(&cell.overflow);
                 }
                 Cell::IndexLeaf(cell) => {
-                    extend_overflow(&mut overflow, &cell.overflow);
+                    extend_overflow(&cell.overflow);
                 }
             };
         }
@@ -140,6 +156,7 @@ impl BTree {
             None => unreachable!("Attempt to merge the unexpected Record types."),
         };
         payload.extend(overflow.into_iter().map(|v| v.value));
+
         match opage.next_page {
             0 => Ok(payload),
             n => Self::follow_overflow(payload, opage.overflow_units, n as usize, reader),
