@@ -11,7 +11,7 @@ use dioxus_free_icons::Icon;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
-use crate::{BTreeNodeView, Field, Value};
+use crate::{BTreeNodeView, Field, PageView, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NavMove {
@@ -64,19 +64,23 @@ fn move_to(direction: NavMove, nf: usize, np: usize) {
 
 fn try_jump(nf: usize, np: usize) {
     let viewer = use_context::<AppState>().viewer;
-    let mut selected_page = use_context::<AppState>().selected_page;
-    let mut selected_field = use_context::<AppState>().selected_field;
-    let mut selected_part = use_context::<AppState>().selected_part;
-    let mut locked_field = use_context::<AppState>().locked_field;
-
+    let selected_page = use_context::<AppState>().selected_page;
     let page = &selected_page();
     let field = &page.parts()[np].fields()[nf];
     if let Ok(n) = field.try_page_number() {
-        *selected_page.write() = viewer.read().get_page(n);
-        *locked_field.write() = None;
-        *selected_field.write() = None;
-        *selected_part.write() = None;
+        update_selected_page(viewer.read().get_page(n));
     }
+}
+
+fn update_selected_page(page: Rc<dyn PageView>) {
+    let mut selected_page = use_context::<AppState>().selected_page;
+    let mut selected_part = use_context::<AppState>().selected_part;
+    let mut selected_field = use_context::<AppState>().selected_field;
+    let mut locked_field = use_context::<AppState>().locked_field;
+    *selected_page.write() = page;
+    *selected_part.write() = None;
+    *selected_field.write() = None;
+    *locked_field.write() = None;
 }
 
 #[component]
@@ -106,10 +110,6 @@ pub fn Home(route: Vec<String>) -> Element {
 pub fn Header() -> Element {
     let mut current_db = use_context::<AppState>().current_db;
     let mut viewer = use_context::<AppState>().viewer;
-    let mut selected_page = use_context::<AppState>().selected_page;
-    let mut selected_part = use_context::<AppState>().selected_part;
-    let mut selected_field = use_context::<AppState>().selected_field;
-    let mut locked_field = use_context::<AppState>().locked_field;
     rsx! {
         div {
             class: "h-12 flex items-center bg-slate-200",
@@ -138,10 +138,7 @@ pub fn Header() -> Element {
                         // preloaded databases shouldn't fail
                         let new_viewer = Viewer::new_from_included(e.value().as_str()).expect("Viewer failed");
                         let first_page = new_viewer.get_page(1);
-                        *selected_page.write() = first_page;
-                        *selected_part.write() = None;
-                        *selected_field.write() = None;
-                        *locked_field.write() = None;
+                        update_selected_page(first_page);
                         *viewer.write() = new_viewer;
                     },
                     for name in viewer.read().included_dbnames() {
@@ -245,7 +242,7 @@ pub fn LeftSide() -> Element {
     let mut list = use_signal(|| true);
     rsx! {
         div {
-            class: "p-4 h-[calc(100vh-48px)] overflow-auto w-full text-sm font-medium",
+            class: "p-4 h-[calc(100vh-48px)] overflow-y-auto w-full text-sm font-medium",
             div {
                 class: "flex w-full",
                 div {
@@ -282,10 +279,7 @@ pub fn LeftSide() -> Element {
 pub fn PageListTab() -> Element {
     let viewer = use_context::<AppState>().viewer;
     let pages = viewer.read().pages.clone();
-    let mut selected_page = use_context::<AppState>().selected_page;
-    let mut selected_part = use_context::<AppState>().selected_part;
-    let mut selected_field = use_context::<AppState>().selected_field;
-    let mut locked_field = use_context::<AppState>().locked_field;
+    let selected_page = use_context::<AppState>().selected_page;
     rsx! {
         div {
             class: "rounded-box p-4 min-w-fit max-w-fit",
@@ -302,10 +296,7 @@ pub fn PageListTab() -> Element {
                             class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
                             class: if selected_page.read().id() == page.id() {"btn-active"},
                             onclick: move |_| {
-                                *selected_page.write() = page.clone();
-                                *selected_part.write() = None;
-                                *selected_field.write() = None;
-                                *locked_field.write() = None;
+                                update_selected_page(page.clone());
                             },
                             "Page {n+1}",
                             br {}
@@ -350,7 +341,7 @@ pub fn PageTreeTab() -> Element {
                             }
                         }
                         div {
-                            class: "collapse-content text-xs overflow-x-auto",
+                            class: "collapse-content text-xs overflow-x-auto overflow-y-hidden",
                             NodeElement { node: tree.root.clone(), root: true }
                         }
                     }
@@ -370,10 +361,7 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
     };
 
     let viewer = use_context::<AppState>().viewer;
-    let mut selected_page = use_context::<AppState>().selected_page;
-    let mut selected_part = use_context::<AppState>().selected_part;
-    let mut selected_field = use_context::<AppState>().selected_field;
-    let mut locked_field = use_context::<AppState>().locked_field;
+    let selected_page = use_context::<AppState>().selected_page;
     rsx! {
         div {
             class: "w-full",
@@ -387,10 +375,7 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
 
                             let pages = viewer.read().pages.to_vec();
                             move |_| {
-                                *selected_page.write() = pages[node.page_num - 1].clone();
-                                *selected_part.write() = None;
-                                *selected_field.write() = None;
-                                *locked_field.write() = None;
+                                update_selected_page(pages[node.page_num - 1].clone());
                             }
                         },
                         Icon {
@@ -414,10 +399,7 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
 
                                 let pages = viewer.read().pages.to_vec();
                                 move |_| {
-                                    *selected_page.write() = pages[page_num - 1].clone();
-                                    *selected_part.write() = None;
-                                    *selected_field.write() = None;
-                                    *locked_field.write() = None;
+                                    update_selected_page(pages[page_num - 1].clone());
                                 }
                             },
                             Icon {
