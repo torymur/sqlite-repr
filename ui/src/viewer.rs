@@ -6,7 +6,7 @@ use std::rc::Rc;
 use parser::*;
 
 use crate::included_db::INCLUDED_DB;
-use crate::{BTreeNodeView, BTreeView, PageElementBuilder, PageLayout, PageView};
+use crate::{BTreeNodeView, BTreeView, Field, PageElementBuilder, PageLayout, PageView, Part};
 
 #[derive(Debug)]
 pub struct Viewer {
@@ -63,6 +63,20 @@ impl Viewer {
         self.pages
             .get(id as usize - 1)
             .expect("Page is outside of Viewer range.")
+            .clone()
+    }
+
+    pub fn get_part(&self, page: &Rc<dyn PageView>, index: usize) -> Rc<dyn Part> {
+        page.parts()
+            .get(index)
+            .expect("Part is outside of Viewer Page range.")
+            .clone()
+    }
+
+    pub fn get_field(&self, part: &Rc<dyn Part>, index: usize) -> Rc<Field> {
+        part.fields()
+            .get(index)
+            .expect("Fields is outside of Viewer Part range.")
             .clone()
     }
 

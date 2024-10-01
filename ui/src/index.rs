@@ -58,8 +58,8 @@ fn move_to(direction: NavMove, nf: usize, np: usize) {
     let field = &parts[next_np].fields()[next_nf];
 
     *locked_field.write() = Some((next_np, next_nf));
-    *selected_field.write() = Some(field.clone());
-    *selected_part.write() = Some(part.clone());
+    *selected_field.write() = field.clone();
+    *selected_part.write() = part.clone();
 }
 
 fn try_jump(nf: usize, np: usize) {
@@ -73,13 +73,16 @@ fn try_jump(nf: usize, np: usize) {
 }
 
 fn update_selected_page(page: Rc<dyn PageView>) {
+    let viewer = use_context::<AppState>().viewer;
     let mut selected_page = use_context::<AppState>().selected_page;
     let mut selected_part = use_context::<AppState>().selected_part;
     let mut selected_field = use_context::<AppState>().selected_field;
     let mut locked_field = use_context::<AppState>().locked_field;
+    let part = viewer.read().get_part(&page, 0);
+    let field = viewer.read().get_field(&part, 0);
     *selected_page.write() = page;
-    *selected_part.write() = None;
-    *selected_field.write() = None;
+    *selected_part.write() = part;
+    *selected_field.write() = field;
     *locked_field.write() = None;
 }
 
@@ -230,10 +233,13 @@ pub fn Body() -> Element {
 pub fn RightSide() -> Element {
     rsx! {
         div {
-            Description { }
-        }
-        div {
-            Visual { }
+            class: "h-[calc(100vh-48px)] overflow-y-auto",
+            div {
+                Description { }
+            }
+            div {
+                Visual { }
+            }
         }
     }
 }
@@ -244,7 +250,7 @@ pub fn LeftSide() -> Element {
         div {
             class: "p-4 h-[calc(100vh-48px)] overflow-y-auto w-full text-sm font-medium",
             div {
-                class: "flex w-full",
+                class: "flex w-full opacity-90",
                 div {
                     class: "border border-slate-800 hover:bg-slate-800 hover:text-slate-330",
                     class: if list() {"bg-slate-800 text-slate-330"},
@@ -252,7 +258,7 @@ pub fn LeftSide() -> Element {
                         list.set(true);
                     },
                     div {
-                        class: "p-2",
+                        class: "px-2 py-1",
                         "Page View"
                     }
                 }
@@ -263,7 +269,7 @@ pub fn LeftSide() -> Element {
                         list.set(false);
                     },
                     div {
-                        class: "p-2",
+                        class: "px-2 py-1",
                         "Tree View"
                     }
                 }
@@ -435,79 +441,66 @@ pub fn Description() -> Element {
     let selected_page = use_context::<AppState>().selected_page;
     let selected_part = use_context::<AppState>().selected_part;
     let selected_field = use_context::<AppState>().selected_field;
-    let (part_desc, part_label) = match selected_part() {
-        None => ("", "".to_string()),
-        Some(p) => (p.desc(), p.label()),
-    };
-    match selected_field() {
-        None => {
-            rsx! {
-                div {
-                    class: "p-4 h-80 w-full overflow-auto",
-                    "{selected_page().desc()}"
-                }
+    let part_desc = selected_part().desc();
+    let part_label = selected_part().label();
+    let field = selected_field();
+    rsx! {
+        div {
+            class: "p-4 h-80 w-full overflow-auto",
+            div {
+                "{selected_page().desc()}"
             }
-        }
-        Some(field) => {
-            rsx! {
+            FieldNavigation { title: part_label }
+            div {
+                class: "text-xs",
+                "{part_desc}"
+            }
+            div {
+                class: "flex pt-6 text-xs space-x-6",
                 div {
-                    class: "p-4 h-80 w-full overflow-auto",
-                    div {
-                        "{selected_page().desc()}"
-                    }
-                    FieldNavigation { title: part_label }
-                    div {
-                        class: "text-xs",
-                        "{part_desc}"
-                    }
-                    div {
-                        class: "flex pt-6 text-xs space-x-6",
-                        div {
-                            class: "w-2/3",
-                            "{field.desc}"
-                        }
-                        div {
-                            class: "w-1/3",
-                            table {
-                                class: "table table-xs table-fixed",
-                                tbody {
-                                    tr {
-                                        td {
-                                            "Offset"
-                                        }
-                                        td {
-                                            "{field.offset} byte(s)"
-                                        }
+                    class: "w-2/3",
+                    "{field.desc}"
+                }
+                div {
+                    class: "w-1/3",
+                    table {
+                        class: "table table-xs table-fixed",
+                        tbody {
+                            tr {
+                                td {
+                                    "Offset"
+                                }
+                                td {
+                                    "{field.offset} byte(s)"
+                                }
+                            }
+                            tr {
+                                td {
+                                    "Size"
+                                }
+                                td {
+                                    "{field.size} byte(s)"
+                                }
+                            }
+                            tr {
+                                td {
+                                    "Value"
+                                }
+                                td {
+                                    div {
+                                        class: "truncate",
+                                        "{field.value}"
                                     }
-                                    tr {
-                                        td {
-                                            "Size"
-                                        }
-                                        td {
-                                            "{field.size} byte(s)"
-                                        }
-                                    }
-                                    tr {
-                                        td {
-                                            "Value"
-                                        }
-                                        td {
-                                            div {
-                                                class: "truncate",
-                                                "{field.value}"
-                                            }
-                                        }
-                                    }
-                                    tr {
-                                        td {
-                                            "Hex"
-                                        }
-                                        td {
-                                            div {
-                                                class: "truncate",
-                                                "{field.to_hex()}"
-                                            }
-                                        }
+                                }
+                            }
+                            tr {
+                                td {
+                                    "Hex"
+                                }
+                                td {
+                                    div {
+                                        class: "truncate",
+                                        "{field.to_hex()}"
                                     }
                                 }
                             }
@@ -638,8 +631,8 @@ pub fn FieldElement(nf: usize, np: usize) -> Element {
                         if locked().is_some() {return}
 
                         // If field is not locked we want it to move freely.
-                        *selected_field.write() = Some(field.clone());
-                        *selected_part.write() = Some(part.clone());
+                        *selected_field.write() = field.clone();
+                        *selected_part.write() = part.clone();
                     }
                 },
                 onclick: {
@@ -658,8 +651,8 @@ pub fn FieldElement(nf: usize, np: usize) -> Element {
 
                         if locked().is_none() || locked() != Some((np, nf)) {
                             *locked.write() = Some((np, nf));
-                            *selected_field.write() = Some(field.clone());
-                            *selected_part.write() = Some(part.clone());
+                            *selected_field.write() = field.clone();
+                            *selected_part.write() = part.clone();
                         } else {
                             *locked.write() = None;
                         }
