@@ -3,15 +3,16 @@
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use parser::{Cell, OverflowPage, Reader, StdError, TrunkFreelistPage};
+use parser::*;
 
 use crate::included_db::INCLUDED_DB;
-use crate::{PageElementBuilder, PageLayout, PageView};
+use crate::{BTreeNodeView, BTreeView, PageElementBuilder, PageLayout, PageView};
 
 #[derive(Debug)]
 pub struct Viewer {
     pub included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])>,
     pub pages: Vec<Rc<dyn PageView>>,
+    pub btrees: Vec<BTreeView>,
 }
 
 pub type Result<T, E = StdError> = std::result::Result<T, E>;
@@ -33,47 +34,25 @@ impl Viewer {
             };
         }
 
-        for n in 1..reader.pages_total() + 1 {
-            if pages_map.contains_key(&n) {
-                // It was already filled.
-                continue;
-            };
-
-            let page = match reader.get_btree_page(n) {
-                Ok(page) => page,
-                Err(_) => continue,
-            };
-            // Check for overflow information in each cell of the page.
-            for cell in &page.cells {
-                let cell_overflow = match cell {
-                    Cell::TableInterior(_) => continue, // the only one without overflow
-                    Cell::TableLeaf(c) => &c.overflow,
-                    Cell::IndexLeaf(c) => &c.overflow,
-                    Cell::IndexInterior(c) => &c.overflow,
-                };
-                match cell_overflow {
-                    None => continue,
-                    Some(overflow) => {
-                        let opage = reader
-                            .get_overflow_page(overflow.units.to_vec(), overflow.page as usize)?;
-                        Self::load_overflow_page(
-                            opage,
-                            overflow.page as usize,
-                            &mut pages_map,
-                            &reader,
-                        )?;
-                    }
-                };
-            }
-            let page_element = PageLayout::Btree(page);
-            pages_map.insert(
-                n,
-                Rc::new(PageElementBuilder::new(page_element, size, n).build()),
-            );
+        let btrees = reader.get_btrees()?;
+        let mut view_trees = vec![];
+        for tree in btrees {
+            let mut view_root = BTreeNodeView::default();
+            Self::load_btree_node(tree.root, &mut pages_map, &mut view_root, size);
+            view_trees.push(BTreeView {
+                ttype: tree.ttype,
+                name: tree.name,
+                root: view_root,
+            })
         }
 
         let pages: Vec<Rc<dyn PageView>> = pages_map.into_values().collect();
-        Ok(Self { included_db, pages })
+
+        Ok(Self {
+            included_db,
+            pages,
+            btrees: view_trees,
+        })
     }
 
     pub fn included_dbnames(&self) -> Vec<String> {
@@ -87,25 +66,36 @@ impl Viewer {
             .clone()
     }
 
-    fn load_overflow_page(
-        page: OverflowPage,
-        page_num: usize,
-        pages: &mut BTreeMap<usize, Rc<dyn PageView>>,
-        reader: &Reader,
-    ) -> Result<(), StdError> {
-        let page_size = reader.db_header.page_size as usize;
-        let page_element = PageLayout::Overflow(page.clone());
-        pages.insert(
-            page_num,
-            Rc::new(PageElementBuilder::new(page_element, page_size, page_num).build()),
+    fn load_btree_node(
+        node: BTreeNode,
+        pmap: &mut BTreeMap<usize, Rc<dyn PageView>>,
+        view_root: &mut BTreeNodeView,
+        size: usize,
+    ) {
+        let page_element = PageLayout::Btree(node.page);
+        pmap.insert(
+            node.page_num,
+            Rc::new(PageElementBuilder::new(page_element, size, node.page_num).build()),
         );
-        // Follow further overflow pages.
-        match page.next_page {
-            0 => Ok(()),
-            page_num => {
-                let page_num = page_num as usize;
-                let next_page = reader.get_overflow_page(page.overflow_units, page_num)?;
-                Self::load_overflow_page(next_page, page_num, pages, reader)
+        view_root.page_num = node.page_num;
+
+        if let Some(overflow) = node.overflow {
+            view_root.overflow = overflow.iter().map(|o| o.page_num).collect::<Vec<_>>();
+
+            for node in overflow {
+                let page_element = PageLayout::Overflow(node.page);
+                pmap.insert(
+                    node.page_num,
+                    Rc::new(PageElementBuilder::new(page_element, size, node.page_num).build()),
+                );
+            }
+        }
+
+        if let Some(children) = node.children {
+            for child in children {
+                let mut view_child = BTreeNodeView::default();
+                Self::load_btree_node(child, pmap, &mut view_child, size);
+                view_root.children.push(view_child);
             }
         }
     }

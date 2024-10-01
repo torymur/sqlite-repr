@@ -54,6 +54,30 @@ pub enum PageLayout {
     LeafFreelist(LeafFreelistPage),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BTreeNodeView {
+    pub page_num: usize,
+    pub children: Vec<BTreeNodeView>,
+    pub overflow: Vec<usize>,
+}
+
+impl Default for BTreeNodeView {
+    fn default() -> Self {
+        Self {
+            page_num: 0,
+            children: vec![],
+            overflow: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BTreeView {
+    pub ttype: String,
+    pub name: String,
+    pub root: BTreeNodeView,
+}
+
 impl PageElementBuilder {
     pub fn new(page: PageLayout, size: usize, page_num: usize) -> Self {
         Self {
@@ -332,10 +356,8 @@ impl fmt::Display for Value {
                 RecordType::Zero(v) | RecordType::One(v) => write!(f, "Integer {v}"),
                 RecordType::I8(v) => write!(f, "{v}"),
                 RecordType::I16(v) => write!(f, "{v}"),
-                RecordType::I24(v) => write!(f, "{v}"),
-                RecordType::I32(v) => write!(f, "{v}"),
-                RecordType::I48(v) => write!(f, "{v}"),
-                RecordType::I64(v) => write!(f, "{v}"),
+                RecordType::I24(v) | RecordType::I32(v) => write!(f, "{v}"),
+                RecordType::I48(v) | RecordType::I64(v) => write!(f, "{v}"),
                 RecordType::F64(v) => write!(f, "{v}"),
                 RecordType::Ten | RecordType::Eleven => write!(f, "Internal codes"),
                 RecordType::Blob(Some(v)) => write!(f, "Blob {:?}", v),

@@ -1,6 +1,7 @@
 //! Experimentation around sqlite internal format parsing, based on https://www.sqlite.org/fileformat2.html
 #![feature(str_from_utf16_endian)]
 
+pub mod btree;
 pub mod cell;
 pub mod freelist;
 pub mod header;
@@ -10,6 +11,7 @@ pub mod reader;
 pub mod record;
 pub mod varint;
 
+pub use btree::{BTree, BTreeNode};
 pub use cell::{
     Cell, CellOverflow, IndexInteriorCell, IndexLeafCell, TableInteriorCell, TableLeafCell,
 };

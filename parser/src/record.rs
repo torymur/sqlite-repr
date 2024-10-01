@@ -242,4 +242,34 @@ impl RecordValue {
             _ => unreachable!("Record Value of unknown serial type."),
         }
     }
+
+    /// Merging RecordValues is helpful to create full payload when spilled over.
+    pub fn merge(self, rhs: RecordValue) -> Option<RecordValue> {
+        // Only Text & Blob types can be meaningfully merged together.
+        match (&self.value, &rhs.value) {
+            (RecordType::Text(lval), RecordType::Text(rval)) => match (lval, rval) {
+                (Some(l), Some(r)) => {
+                    let value = RecordType::Text(Some(format!("{}{}", l, r)));
+                    // Bytes are guaranteed to be Some if value is Some by design.
+                    let bytes = Some([self.bytes.unwrap(), rhs.bytes.unwrap()].concat());
+                    Some(RecordValue { bytes, value })
+                }
+                (None, Some(_)) => Some(rhs),
+                (Some(_), None) => Some(self),
+                (None, None) => None,
+            },
+            (RecordType::Blob(lval), RecordType::Blob(rval)) => match (lval, rval) {
+                (Some(l), Some(r)) => {
+                    let value = RecordType::Blob(Some([l.to_vec(), r.to_vec()].concat()));
+                    // Bytes are guaranteed to be Some if value is Some by design.
+                    let bytes = Some([self.bytes.unwrap(), rhs.bytes.unwrap()].concat());
+                    Some(RecordValue { bytes, value })
+                }
+                (None, Some(_)) => Some(rhs),
+                (Some(_), None) => Some(self),
+                (None, None) => None,
+            },
+            _ => None,
+        }
+    }
 }

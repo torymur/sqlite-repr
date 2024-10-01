@@ -1,7 +1,4 @@
-use crate::{
-    DBHeader, LeafFreelistPage, OverflowPage, OverflowUnit, Page, Result, StdError,
-    TrunkFreelistPage,
-};
+use crate::*;
 use std::rc::Rc;
 
 pub const DB_HEADER_SIZE: usize = 100;
@@ -63,6 +60,22 @@ impl Reader {
         Ok(page)
     }
 
+    /// Create btrees.
+    pub fn get_btrees(&self) -> Result<Vec<BTree>, StdError> {
+        // Schema page is always a table b-tree and always has a root page of 1.
+        let mut cells = vec![];
+        let _ = self.collect_cells(1, &mut cells);
+        let mut trees = vec![BTree {
+            ttype: "table".to_string(),
+            name: "master schema".to_string(),
+            root: BTreeNode::new(1, self)?,
+        }];
+        for cell in cells {
+            trees.push(BTree::new(&cell, self)?);
+        }
+        Ok(trees)
+    }
+
     /// Get an actual number of total pages per database file.
     pub fn pages_total(&self) -> usize {
         // Based on docs descriptions, db_size is valid only if:
@@ -78,6 +91,32 @@ impl Reader {
         } else {
             self.bytes.len() / self.db_header.page_size as usize
         }
+    }
+
+    fn collect_cells(
+        &self,
+        page_num: usize,
+        cells: &mut Vec<TableLeafCell>,
+    ) -> Result<(), StdError> {
+        let page = self.get_btree_page(page_num)?;
+        for outer_cell in page.cells.iter() {
+            match outer_cell {
+                Cell::TableInterior(cell) => {
+                    // No overflow, but we need to follow references to the leaves.
+                    self.collect_cells(cell.left_page_number as usize, cells)?;
+                }
+                Cell::TableLeaf(cell) => {
+                    cells.push(cell.clone());
+                }
+                _ => {}
+            };
+        }
+        if page.page_header.page_type.is_interior() {
+            // Don't forget the right-most pointer, which is in the page header.
+            // If it's interior page, then page_num is Some by design.
+            self.collect_cells(page.page_header.page_num.unwrap() as usize, cells)?;
+        }
+        Ok(())
     }
 
     fn page_slice(&self, page_num: usize) -> Result<Vec<u8>, StdError> {
