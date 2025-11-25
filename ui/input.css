@@ -1,9 +1,48 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "./src/**/*.{rs,html,css}";
+
+@plugin "@tailwindcss/typography";
+
+/* daisyui requirement should go after typography */
+@plugin "daisyui";
+
+@plugin "daisyui/theme" {
+    name: "cyberpunk";
+    default: true;
+    --color-primary: #7B92B2;
+    --color-base-100: #FFFFFF;
+    --color-base-200: #7387A3;
+    --color-base-300: #7387A3;
+    --color-secondary: #7B92B2;
+}
+
+@plugin "tailwindcss-bg-patterns";
+
+@source inline("pattern-vertical-lines");
+@source inline("pattern-opacity-60");
+@source inline("pattern-white");
+@source inline("pattern-size-1");
+@source inline("pattern-bg-slate-200");
+@source inline("locked");
+@source inline("{bg,text,border}-{orange,green,slate}-{600,700,800}");
+@source inline("bg-slate-{1,2,3,4}{0..9}0");
+
+@theme {
+    --color-slate-330: #b8c2d0;
+    --color-slate-360: #aab4c4;
+    --color-slate-390: #9ea8bb;
+}
 
 @layer utilities {
-  .locked {
-    background-color: #c4aaa0;
-  }
+    .locked {
+        background-color: #c4aaa0;
+    }
+}
+
+select {
+    @apply outline-none;
+}
+
+*:focus {
+    @apply outline-none;
 }
