@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           cd ui/
-          dx build --release
+          ASSET_PREFIX="sqlite-repr" dx build --release
           cd ../target/dx/ui/release/web/public
           sed -i 's#/assets/#/sqlite-repr/assets/#g' index.html
           sed -i 's#/assets/#/sqlite-repr/assets/#g' assets/ui-*.js

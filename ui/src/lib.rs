@@ -15,6 +15,21 @@ use std::rc::Rc;
 
 use parser::*;
 
+#[macro_export]
+macro_rules! local_asset {
+    ($path:expr) => {{
+        let p = $path;
+        match option_env!("ASSET_PREFIX") {
+            Some(prefix) => format!(
+                "{}/{}",
+                prefix.trim_end_matches('/'),
+                p.trim_start_matches('/')
+            ),
+            None => p.to_string(),
+        }
+    }};
+}
+
 pub trait PageView: std::fmt::Debug {
     fn id(&self) -> usize;
     fn size(&self) -> usize;

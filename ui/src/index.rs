@@ -11,7 +11,7 @@ use dioxus_free_icons::Icon;
 
 use crate::state::{AppState, Format};
 use crate::viewer::Viewer;
-use crate::{BTreeNodeView, Field, PageView, Value};
+use crate::{local_asset, BTreeNodeView, Field, PageView, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NavMove {
@@ -122,7 +122,7 @@ pub fn Header() -> Element {
                     href: "https://www.sqlite.org/fileformat2.html",
                     img {
                         class: "h-10 object-scale-down",
-                        src: "./sqlite_logo.png"
+                        src: local_asset!("sqlite_logo.png"),
                     }
                 }
             }
@@ -161,7 +161,7 @@ pub fn Header() -> Element {
                     href: "https://dioxuslabs.com/",
                     img {
                         class: "h-7 object-scale-down",
-                        src: "./dioxus_logo.png"
+                        src: local_asset!("dioxus_logo.png"),
                     }
                 }
             }
@@ -172,7 +172,7 @@ pub fn Header() -> Element {
                     href: "https://github.com/torymur/sqlite-repr",
                     img {
                         class: "h-7 object-scale-down",
-                        src: "./github-mark.png"
+                        src: local_asset!("github-mark.png"),
                     }
                 }
             }
