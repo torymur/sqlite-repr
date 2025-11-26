@@ -135,7 +135,7 @@ pub fn Header() -> Element {
                 class: "join",
                 ExampleDetails { }
                 select {
-                    class: "join-item select select-secondary select-bordered font-bold tracking-tighter focus:outline-none",
+                    class: "join-item h-12 w-40 select select-secondary select-bordered font-bold tracking-tighter",
                     oninput: move |e| {
                         *current_db.write() = e.value().to_string();
                         // preloaded databases shouldn't fail
@@ -157,7 +157,7 @@ pub fn Header() -> Element {
                 class: "flex text-sm items-center tracking-lighter font-thin",
                 "Built with",
                 a {
-                    class: "flex",
+                    class: "flex pr-2",
                     href: "https://dioxuslabs.com/",
                     img {
                         class: "h-7 object-scale-down",
@@ -166,7 +166,7 @@ pub fn Header() -> Element {
                 }
             }
             div {
-                class: "tooltip tooltip-left pl-2 pr-4",
+                class: "tooltip tooltip-left pr-4",
                 "data-tip": "Like the project? Give us a star ☆",
                 a {
                     href: "https://github.com/torymur/sqlite-repr",
@@ -192,7 +192,7 @@ pub fn ExampleDetails() -> Element {
                 div {
                     class: "dropdown dropdown-hover",
                     div {
-                        class: "join-item btn bg-secondary border border-secondary tracking-tighter font-bold hover:border-secondary hover:bg-secondary",
+                        class: "join-item h-12 w-40 btn bg-secondary border border-secondary tracking-tighter font-bold hover:border-secondary hover:bg-secondary",
                         tabindex: 0,
                         role: "button",
                         "Database Example"
@@ -299,14 +299,17 @@ pub fn PageListTab() -> Element {
                             "{&page.size() * n}", // page offset
                         }
                         button {
-                            class: "w-40 h-fit text-left btn-ghost btn-sm btn-block font-medium tracking-tighter truncate",
+                            class: "w-40 h-fit px-3 text-left btn btn-ghost btn-block font-medium tracking-tighter truncate",
                             class: if selected_page.read().id() == page.id() {"btn-active"},
                             onclick: move |_| {
                                 update_selected_page(page.clone());
                             },
-                            "Page {n+1}",
-                            br {}
-                            "{&page.label()}",
+                            span {
+                                class: "w-full text-left block",
+                                "Page {n+1}",
+                                br {}
+                                "{&page.label()}",
+                            }
                         }
                     }
                 }
@@ -375,7 +378,7 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
                 class: if !root {"px-3"},
                 div {
                     div {
-                        class: "flex items-center space-x-1 btn-ghost btn-xs btn-block",
+                        class: "flex items-center btn btn-ghost btn-xs btn-block",
                         class: if selected_page.read().id() == node.page_num {"btn-active"},
                         onclick: {
 
@@ -389,17 +392,20 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
                             height: 15,
                             icon: BsArrowReturnRight,
                         }
-                        div {
-                            class: "font-medium",
-                            "{node.page_num}"
-                        }
-                        div {
-                            if root {"Root {node_type}"} else {"{node_type}"}
+                        span {
+                            class: "w-full flex text-left block space-x-1",
+                            div {
+                                class: "font-medium",
+                                "{node.page_num}"
+                            }
+                            div {
+                                if root {"Root {node_type}"} else {"{node_type}"}
+                            }
                         }
                     }
                     for page_num in node.overflow {
                         div {
-                            class: "flex pl-3 items-center space-x-1 btn-ghost btn-xs btn-block",
+                            class: "flex pl-3 items-center btn btn-ghost btn-xs btn-block",
                             class: if selected_page.read().id() == page_num {"btn-active"},
                             onclick: {
 
@@ -413,12 +419,15 @@ pub fn NodeElement(node: BTreeNodeView, root: bool) -> Element {
                                 height: 15,
                                 icon: BsArrowRight,
                             }
-                            div {
-                                class: "font-medium",
-                                "{page_num}"
-                            }
-                            div {
-                                "Overflow"
+                            span {
+                                class: "w-full flex text-left block space-x-1",
+                                div {
+                                    class: "font-medium",
+                                    "{page_num}"
+                                }
+                                div {
+                                    "Overflow"
+                                }
                             }
                         }
                     }
@@ -537,6 +546,8 @@ pub fn FieldNavigation(title: String) -> Element {
                             move |_| move_to(NavMove::Left, nf, np)
                         },
                         Icon {
+                            width: 15,
+                            height: 15,
                             icon: BsArrowBarLeft,
                         }
                     }
@@ -550,6 +561,8 @@ pub fn FieldNavigation(title: String) -> Element {
                             move |_| move_to(NavMove::Right, nf, np)
                         },
                         Icon {
+                            width: 15,
+                            height: 15,
                             icon: BsArrowBarRight,
                         }
                     }
@@ -569,7 +582,7 @@ pub fn Visual() -> Element {
             class: "flex items-center bg-secondary",
             div { class: "flex-grow" }
             div {
-                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
+                class: "btn btn-sm btn-ghost tracking-tighter font-bold",
                 class: if formatting() == Format::Hybrid {"btn-active"},
                 onclick: move |_| {
                     *formatting.write() = Format::Hybrid
@@ -577,7 +590,7 @@ pub fn Visual() -> Element {
                 "Hybrid",
             }
             div {
-                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
+                class: "btn btn-sm btn-ghost tracking-tighter font-bold",
                 class: if formatting() == Format::Hex {"btn-active"},
                 onclick: move |_| {
                     *formatting.write() = Format::Hex
@@ -585,7 +598,7 @@ pub fn Visual() -> Element {
                 "Hex",
             }
             div {
-                class: "btn btn-xs btn-ghost tracking-tighter font-bold",
+                class: "btn btn-sm btn-ghost tracking-tighter font-bold",
                 class: if formatting() == Format::Text {"btn-active"},
                 onclick: move |_| {
                     *formatting.write() = Format::Text

@@ -1,5 +1,9 @@
 .PHONY: setup
 setup: included included/simple included/big_page included/overflow_page included/table_index_leaf included/table_index_interior included/freelist_page included/mixed
+
+.PHONY: update-css
+update-css:
+	npm i -D daisyui@latest "@tailwindcss/typography@latest" tailwindcss-bg-patterns@latest
 	
 included:
 	mkdir $@
@@ -71,4 +75,4 @@ clean:
 
 .PHONY: mini
 mini: 
-	npx tailwindcss -i ./input.css -o assets/tailwind.css --minify
+	npx tailwindcss -i ./input.css -o public/tailwind.css --minify

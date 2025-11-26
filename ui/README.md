@@ -8,13 +8,13 @@ Describes on-disk [database file format](https://www.sqlite.org/fileformat2.html
 2. Install the tailwind css cli: https://tailwindcss.com/docs/installation
 3. Install daisyUI and official Tailwind CSS Typography plugin:
 ```bash
-npm i -D daisyui@latest @tailwindcss/typography tailwindcss-bg-patterns
+npm i -D daisyui@latest @tailwindcss/typography@latest tailwindcss-bg-patterns@latest
 
 ```
 4. Run the following command in the root of the project to start the tailwind CSS compiler:
 
 ```bash
-npx tailwindcss -i ./input.css -o ./assets/tailwind.css --watch
+npx tailwindcss -i ./input.css -o ./public/tailwind.css --watch
 ```
 
 5. In the root of the project create database examples:

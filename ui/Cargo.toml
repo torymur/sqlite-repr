@@ -14,11 +14,10 @@ path = "src/lib.rs"
 
 
 [dependencies]
-dioxus = { version = "0.5", features = ["web", "router"] }
-dioxus-free-icons = { version = "0.8", features = ["bootstrap"] }
-hex = {version = "0.4.3"}
-wasm-bindgen = {version = "0.2.92"}
-parser = {path = "../parser"}
+dioxus = { version = "0.7", features = ["web", "router"] }
+dioxus-free-icons = { version = "0.10", features = ["bootstrap"] }
+hex = { version = "0.4.3" }
+parser = { path = "../parser" }
 
 # Debug
-dioxus-logger = "0.5.1"
+dioxus-logger = "0.7.1"
