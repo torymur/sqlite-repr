@@ -41,11 +41,11 @@ jobs:
 
       - name: ───⋆⋅☆⋅⋆─ Build Project ─⋆⋅☆⋅⋆───
         shell: bash
-        run: cd ui/ && dx build --release && cp ./index.html ./dist/index.html && cp ./index.html ./dist/404.html
+        run: cd ui/ && dx build --release && cd ./target/dx/ui/release/web/public && cp ./index.html ./404.html
 
       - name: Deploy Project
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: ui/dist
+          folder: target/dx/ui/release/web/public
           clean: false

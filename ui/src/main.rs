@@ -22,14 +22,9 @@ fn main() {
     launch(App);
 }
 
-// static CSS: Asset = asset!("/public/tailwind.css");
-
 fn App() -> Element {
     use_context_provider(AppState::init);
     rsx! {
-    //      document::Stylesheet {
-    //          href: CSS,
-    //      },
-            Router::<Route> {}
-        }
+        Router::<Route> {}
+    }
 }
