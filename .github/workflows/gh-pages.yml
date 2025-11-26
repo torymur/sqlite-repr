@@ -41,11 +41,16 @@ jobs:
 
       - name: ───⋆⋅☆⋅⋆─ Build Project ─⋆⋅☆⋅⋆───
         shell: bash
-        run: cd ui/ && dx build --release && cd ../target/dx/ui/release/web/public && cp ./index.html ./404.html
+        run: |
+          cd ui/
+          dx build --release
+          cd ../target/dx/ui/release/web/public
+          sed -i 's#/assets/#/sqlite-repr/assets/#g' index.html
+          sed -i 's#/assets/#/sqlite-repr/assets/#g' assets/ui-*.js
+          cp ./index.html ./404.html
 
       - name: Deploy Project
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: target/dx/ui/release/web/public
-          clean: false
