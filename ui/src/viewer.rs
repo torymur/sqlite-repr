@@ -18,10 +18,11 @@ pub struct Viewer {
 pub type Result<T, E = StdError> = std::result::Result<T, E>;
 
 impl Viewer {
-    pub fn new_from_included(name: &str) -> Result<Self, StdError> {
-        let included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])> =
-            BTreeMap::from_iter(INCLUDED_DB.iter().copied());
-        let (bytes, _) = included_db.get(name).ok_or("This db is not included.")?;
+    pub fn new(
+        name: &str,
+        dbs: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])>,
+    ) -> Result<Self, StdError> {
+        let (bytes, _) = dbs.get(name).ok_or("This db is not included.")?;
         let reader = Reader::new(bytes)?;
         let size = reader.db_header.page_size as usize;
         let mut pages_map: BTreeMap<usize, Rc<dyn PageView>> = BTreeMap::new();
@@ -49,10 +50,30 @@ impl Viewer {
         let pages: Vec<Rc<dyn PageView>> = pages_map.into_values().collect();
 
         Ok(Self {
-            included_db,
+            included_db: dbs,
             pages,
             btrees: view_trees,
         })
+    }
+
+    pub fn new_from_included(name: &str) -> Result<Self, StdError> {
+        Self::new(name, BTreeMap::from_iter(INCLUDED_DB.iter().copied()))
+    }
+
+    pub fn new_from_local(path: &str, name: &str) -> Result<Self, StdError> {
+        let bytes = std::include_bytes!(path);
+        let bytes_static: &'static [u8] = Box::leak(bytes.into_boxed_slice());
+
+        let name_static: &'static str = Box::leak(name.to_string().into_boxed_str());
+
+        let mut dbs: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])> =
+            INCLUDED_DB.iter().copied().collect();
+        dbs.insert(
+            name_static,
+            (bytes_static, &["Custom local database. Unknown recipe."]),
+        );
+
+        Self::new(name_static, dbs)
     }
 
     pub fn included_dbnames(&self) -> Vec<String> {
