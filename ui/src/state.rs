@@ -27,33 +27,17 @@ pub enum Format {
 }
 
 impl AppState {
-    pub async fn init() -> Self {
-        let (viewer, db_name) = match option_env!("DB_PATH") {
-            Some(p) => {
-                let name = {
-                    match std::path::Path::new(p).file_stem() {
-                        Some(stem) => stem.to_str().unwrap_or("Local Database"),
-                        None => "Local Database",
-                    }
-                };
-                let viewer =
-                    Viewer::new_from_local(p, name).expect("Viewer failed to init from local db.");
-                (viewer, name)
-            }
-            None => {
-                // preloaded dbs shouldn't fail
-                let viewer = Viewer::new_from_included(SIMPLE_DB)
-                    .expect("Viewer failed to init for preloaded db.");
-                (viewer, SIMPLE_DB)
-            }
-        };
-
+    pub fn init() -> Self {
+        let mut viewer = Viewer::new();
+        viewer
+            .load(SIMPLE_DB)
+            .expect("Viewer failed to init for preloaded db.");
         let page = viewer.get_page(1);
         let part = viewer.get_part(&page, 0);
         let field = viewer.get_field(&part, 0);
 
         AppState {
-            current_db: Signal::new(db_name.to_string()),
+            current_db: Signal::new(SIMPLE_DB.to_string()),
             selected_page: Signal::new(page),
             selected_part: Signal::new(part),
             selected_field: Signal::new(field),
