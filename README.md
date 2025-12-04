@@ -26,7 +26,7 @@ To run UI locally, please follow the instructions [here](ui/)
 - [x] Table Interior Btree page
 - [x] Table Leaf Btree page
 - [x] Index Interior Btree page
-- [x] Index Leaf Btree pagecd
+- [x] Index Leaf Btree page
 - [x] Freelist pages
 - [x] Overflow pages
   - [x] Spilled record values
