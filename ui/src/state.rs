@@ -28,9 +28,10 @@ pub enum Format {
 
 impl AppState {
     pub fn init() -> Self {
-        // preloaded db shouldn't fail
-        let viewer =
-            Viewer::new_from_included(SIMPLE_DB).expect("Viewer failed to init for preloaded db.");
+        let mut viewer = Viewer::new();
+        viewer
+            .load(SIMPLE_DB)
+            .expect("Viewer failed to init for preloaded db.");
         let page = viewer.get_page(1);
         let part = viewer.get_part(&page, 0);
         let field = viewer.get_field(&part, 0);

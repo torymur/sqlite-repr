@@ -113,6 +113,7 @@ pub fn Home(route: Vec<String>) -> Element {
 pub fn Header() -> Element {
     let mut current_db = use_context::<AppState>().current_db;
     let mut viewer = use_context::<AppState>().viewer;
+    let mut status = use_signal(|| "Add yours! Up to 50 MB.".to_string());
     rsx! {
         div {
             class: "h-12 flex items-center bg-slate-200",
@@ -135,14 +136,18 @@ pub fn Header() -> Element {
                 class: "join",
                 ExampleDetails { }
                 select {
-                    class: "join-item h-12 w-40 select select-secondary select-bordered font-bold tracking-tighter",
+                    class: "join-item h-12 w-40 select select-secondary select-bordered tracking-tighter",
                     oninput: move |e| {
                         *current_db.write() = e.value().to_string();
+
                         // preloaded databases shouldn't fail
-                        let new_viewer = Viewer::new_from_included(e.value().as_str()).expect("Viewer failed");
+                        let mut new_viewer = viewer.write();
+                        new_viewer.load(e.value().as_str()).expect("Viewer failed");
                         let first_page = new_viewer.get_page(1);
+
+                        // drop writing lock, since updating selected page requires read access
+                        drop(new_viewer);
                         update_selected_page(first_page);
-                        *viewer.write() = new_viewer;
                     },
                     for name in viewer.read().included_dbnames() {
                         option {
@@ -151,6 +156,52 @@ pub fn Header() -> Element {
                         }
                     }
                 }
+            }
+            input {
+                class: "h-12 w-fit tracking-tighter file-input file-input-secondary border border-secondary hover::border-secondary",
+                r#type: "file",
+                // empty title removes automated tooltip with filename
+                title: "",
+                onchange: move |evt| {
+                    let files = evt.files();
+                    if !files.is_empty() {
+                        spawn(async move {
+                            let file = files.get(0).unwrap();
+                            if file.size() > 52_428_800 {
+                                status.set("Failed to load, file is > 50 MB.".into());
+                                return;
+                            }
+
+                            let bytes = file.read_bytes().await;
+                            match bytes {
+                                Ok(b) => {
+                                    let name = file.name();
+                                    let mut new_viewer = viewer.write();
+                                    match new_viewer.load_from_file(b, &name) {
+                                        Ok(_) => {
+                                            *current_db.write() = name.clone();
+                                            let first_page = new_viewer.get_page(1);
+
+                                            // drop writing lock, since updating selected page requires read access
+                                            drop(new_viewer);
+                                            update_selected_page(first_page);
+                                            status.set("Database loaded successfully!".into());
+                                        }
+                                        Err(_) => status.set("Failed to parse database file.".into()),
+                                    }
+                                }
+                                Err(_) => status.set("Failed to read bytes.".into()),
+                            }
+                        });
+                    } else {
+                        // after file picking cancellation show the base message
+                        status.set("Add yours! Up to 50 MB.".into());
+                    }
+                }
+            }
+            div {
+                class: "pl-4 text-sm tracking-tighter font-thin",
+                "{status}"
             }
             div { class: "flex-grow" }
             div {
@@ -192,7 +243,7 @@ pub fn ExampleDetails() -> Element {
                 div {
                     class: "dropdown dropdown-hover",
                     div {
-                        class: "join-item h-12 w-40 btn bg-secondary border border-secondary tracking-tighter font-bold hover:border-secondary hover:bg-secondary",
+                        class: "join-item h-12 w-40 btn bg-secondary border border-secondary tracking-tighter font-semibold hover:border-secondary hover:bg-secondary",
                         tabindex: 0,
                         role: "button",
                         "Database Example"

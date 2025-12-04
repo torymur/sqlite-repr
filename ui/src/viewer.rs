@@ -3,6 +3,8 @@
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+use bytes::Bytes;
+
 use parser::*;
 
 use crate::included_db::INCLUDED_DB;
@@ -13,15 +15,46 @@ pub struct Viewer {
     pub included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])>,
     pub pages: Vec<Rc<dyn PageView>>,
     pub btrees: Vec<BTreeView>,
+    pub parsed: BTreeMap<&'static str, (Vec<Rc<dyn PageView>>, Vec<BTreeView>)>,
 }
 
 pub type Result<T, E = StdError> = std::result::Result<T, E>;
 
 impl Viewer {
-    pub fn new_from_included(name: &str) -> Result<Self, StdError> {
-        let included_db: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])> =
+    pub fn new() -> Self {
+        let dbs: BTreeMap<&'static str, (&'static [u8], &'static [&'static str])> =
             BTreeMap::from_iter(INCLUDED_DB.iter().copied());
-        let (bytes, _) = included_db.get(name).ok_or("This db is not included.")?;
+        let parsed: BTreeMap<&'static str, (Vec<Rc<dyn PageView>>, Vec<BTreeView>)> =
+            BTreeMap::new();
+
+        Self {
+            included_db: dbs,
+            pages: vec![],
+            btrees: vec![],
+            parsed,
+        }
+    }
+
+    pub fn load(&mut self, name: &str) -> Result<(), StdError> {
+        if let Some((pages, btrees)) = self.parsed.get(name) {
+            self.pages = pages.to_vec();
+            self.btrees = btrees.to_vec();
+            return Ok(());
+        }
+
+        let (name_static, bytes) = match self.included_db.get_key_value(name) {
+            Some((&name_static, &(bytes, _))) => (name_static, bytes),
+            None => return Err(format!("This db is not included: {}", name).into()),
+        };
+
+        self.load_from_bytes(bytes, name_static)
+    }
+
+    fn load_from_bytes(
+        &mut self,
+        bytes: &'static [u8],
+        name: &'static str,
+    ) -> Result<(), StdError> {
         let reader = Reader::new(bytes)?;
         let size = reader.db_header.page_size as usize;
         let mut pages_map: BTreeMap<usize, Rc<dyn PageView>> = BTreeMap::new();
@@ -48,11 +81,27 @@ impl Viewer {
 
         let pages: Vec<Rc<dyn PageView>> = pages_map.into_values().collect();
 
-        Ok(Self {
-            included_db,
-            pages,
-            btrees: view_trees,
-        })
+        self.parsed
+            .insert(name as &'static str, (pages.clone(), view_trees.clone()));
+
+        self.pages = pages;
+        self.btrees = view_trees;
+        Ok(())
+    }
+
+    pub fn load_from_file(&mut self, bytes: Bytes, name: &str) -> Result<(), StdError> {
+        let bytes_static: &'static [u8] = Box::leak(bytes.to_vec().into_boxed_slice());
+        let name_static: &'static str = Box::leak(name.to_string().into_boxed_str());
+
+        if let Ok(_) = self.load_from_bytes(bytes_static, name_static) {
+            self.included_db.insert(
+                name_static,
+                (bytes_static, &["Custom local database. Unknown recipe."]),
+            );
+            Ok(())
+        } else {
+            Err("Failed to parse database.".into())
+        }
     }
 
     pub fn included_dbnames(&self) -> Vec<String> {

@@ -18,6 +18,7 @@ dioxus = { version = "0.7", features = ["web", "router"] }
 dioxus-free-icons = { version = "0.10", features = ["bootstrap"] }
 hex = { version = "0.4.3" }
 parser = { path = "../parser" }
+bytes = "1.11"
 
 # Debug
 dioxus-logger = "0.7.1"
