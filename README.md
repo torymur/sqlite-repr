@@ -6,8 +6,19 @@ The SQLite file format is stable, cross-platform and backwards compatible, the d
 
 All that makes it interesting to peek into their on-disk [database file format](https://www.sqlite.org/fileformat2.html) to understand it for software development objective and troubleshooting reasons, as well as to study format of SQLite databases for academic purposes or regular self-education.
 
-### Visual
-Available at https://torymur.github.io/sqlite-repr/
+### Objective
+
+This project provides the visual tool available at https://torymur.github.io/sqlite-repr/ to explore SQLite’s on-disk database file format.
+
+It has some already included database examples to show off main type of SQLite pages like table/index interior/leaf btree pages, freelist and overflow and some other SQLite features.
+
+It also allows you to load and parse your own database file. However, parsing may still fail even for valid database files, as the parser does not yet support all SQLite features.
+
+If that happens, please consider opening an issue and including a minimal example that reproduces the sequence of database queries.
+
+### Development
+
+To run UI locally, please follow the instructions [here](ui/)
 
 ### Map 🗺️ 
 
@@ -15,7 +26,7 @@ Available at https://torymur.github.io/sqlite-repr/
 - [x] Table Interior Btree page
 - [x] Table Leaf Btree page
 - [x] Index Interior Btree page
-- [x] Index Leaf Btree page
+- [x] Index Leaf Btree pagecd
 - [x] Freelist pages
 - [x] Overflow pages
   - [x] Spilled record values
@@ -30,5 +41,5 @@ Available at https://torymur.github.io/sqlite-repr/
 - [x] Page View
 - [x] Tree View
 - [ ] Reserved space
-- [ ] Add yours
+- [x] Add yours
 - [ ] Console  
