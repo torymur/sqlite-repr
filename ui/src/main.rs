@@ -25,6 +25,7 @@ fn main() {
 fn App() -> Element {
     use_context_provider(AppState::init);
     rsx! {
+        document::Title { "SQLite Repr" }
         Router::<Route> {}
     }
 }
