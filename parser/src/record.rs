@@ -140,10 +140,10 @@ impl RecordValue {
                 })
             }
             3 => {
-                let mut bytes: [u8; 4] = [0; 4];
-                let bytes_ref = &mut bytes.as_mut_slice()[1..];
-                bytes_ref.copy_from_slice(&buf[..size]);
-                let value = RecordType::I24(i32::from_be_bytes(bytes));
+                let value = (buf[0] as i8 as i32) << 16
+                    | (buf[1] as i32) << 8
+                    | (buf[2] as i32);
+                let value = RecordType::I24(value);
                 Ok(Self {
                     bytes: Some(buf[..size].to_vec()),
                     value,
@@ -158,10 +158,13 @@ impl RecordValue {
                 })
             }
             5 => {
-                let mut bytes: [u8; 8] = [0; 8];
-                let bytes_ref = &mut bytes.as_mut_slice()[2..];
-                bytes_ref.copy_from_slice(&buf[..size]);
-                let value = RecordType::I48(i64::from_be_bytes(bytes));
+                let value = ((buf[0] as i8 as i64) << 40)
+                    | ((buf[1] as i64) << 32)
+                    | ((buf[2] as i64) << 24)
+                    | ((buf[3] as i64) << 16)
+                    | ((buf[4] as i64) << 8)
+                    | (buf[5] as i64);
+                let value = RecordType::I48(value);
                 Ok(Self {
                     bytes: Some(buf[..size].to_vec()),
                     value,
